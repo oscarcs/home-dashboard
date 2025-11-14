@@ -1,7 +1,6 @@
 const axios = require('axios');
 const { BaseService } = require('../lib/BaseService');
 const { mapIconAndDescription } = require('../lib/weatherUtils');
-const zipcodes = require('zipcodes');
 
 /**
  * Weather API Service (Visual Crossing) - PRIMARY WEATHER DATA SOURCE
@@ -16,6 +15,20 @@ class WeatherService extends BaseService {
       retryAttempts: 3,
       retryCooldown: 1000,
     });
+    this.unitSystem = this.getUnitSystem();
+  }
+
+  getCacheSignature() {
+    const locations = this.getConfiguredLocations();
+    const unitSystem = this.getUnitSystem();
+
+    // Keep instance unit system in sync with current configuration
+    this.unitSystem = unitSystem;
+
+    return JSON.stringify({
+      unitSystem,
+      locations,
+    });
   }
 
   isEnabled() {
@@ -23,11 +36,16 @@ class WeatherService extends BaseService {
     return !!apiKey;
   }
 
-  buildForecastUrl(apiKey, zip, days = 7) {
+  getUnitSystem() {
+    const system = (process.env.WEATHER_UNIT_SYSTEM || '').trim().toLowerCase();
+    return system === 'metric' ? 'metric' : 'us';
+  }
+
+  buildForecastUrl(apiKey, location, days = 7) {
     // Visual Crossing uses location/next{days}days format for forecast
-    const url = new URL(`https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${encodeURIComponent(zip)}/next${days}days`);
+    const url = new URL(`https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${encodeURIComponent(location)}/next${days}days`);
     url.searchParams.set('key', apiKey);
-    url.searchParams.set('unitGroup', 'us'); // Use US units (Fahrenheit, mph, inches)
+    url.searchParams.set('unitGroup', this.unitSystem);
     url.searchParams.set('include', 'days,hours,current,alerts');
     // Include air quality elements: aqius (US EPA AQI) and pm2p5 (PM2.5)
     url.searchParams.set('elements', 'datetime,tempmax,tempmin,temp,feelslike,feelslikemax,feelslikemin,humidity,precip,precipprob,preciptype,snow,snowdepth,windspeed,winddir,pressure,cloudcover,visibility,solarradiation,solarenergy,uvindex,sunrise,sunset,moonphase,conditions,description,icon,severerisk,aqius,pm2p5');
@@ -38,40 +56,60 @@ class WeatherService extends BaseService {
     const apiKey = process.env.VISUAL_CROSSING_API_KEY;
     if (!apiKey) throw new Error('VISUAL_CROSSING_API_KEY not configured');
 
-    // Read location ZIPs from env
-    const mainZip = (process.env.MAIN_LOCATION_ZIP || '').trim();
-    const additionalZips = process.env.ADDITIONAL_LOCATION_ZIPS || '';
-    const additionalArray = additionalZips.split(',').map(z => z.trim()).filter(z => z).slice(0, 3);
-    const locationZips = mainZip ? [mainZip, ...additionalArray] : [];
-    
-    if (locationZips.length === 0) throw new Error('MAIN_LOCATION_ZIP not configured');
+  // Read configured locations from env
+    const locations = this.getConfiguredLocations();
+
+  if (locations.length === 0) throw new Error('No locations configured. Set MAIN_LOCATION.');
 
     const days = 7;
     
     // Fetch all locations in parallel
-    const promises = locationZips.map(zip => 
-      this.fetchLocationData(apiKey, zip, days, logger)
+    const promises = locations.map(location => 
+      this.fetchLocationData(apiKey, location, days, logger)
     );
     
     const results = await Promise.all(promises);
     return results;
   }
 
-  async fetchLocationData(apiKey, zip, days, logger) {
-    const url = this.buildForecastUrl(apiKey, zip, days);
+  getConfiguredLocations() {
+    const mainLocation = (process.env.MAIN_LOCATION || '').trim();
+    const additionalLocationsRaw = process.env.ADDITIONAL_LOCATIONS || '';
+
+    const parsedAdditional = additionalLocationsRaw
+      .split(/\r?\n|\|/)
+      .map(l => l.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
+    const locations = [];
+
+    if (mainLocation) {
+      locations.push(mainLocation);
+    }
+
+    locations.push(...parsedAdditional);
+
+    return Array.from(new Set(locations));
+  }
+
+  async fetchLocationData(apiKey, location, days, logger) {
+    const url = this.buildForecastUrl(apiKey, location, days);
     const resp = await axios.get(url, { timeout: 10000 });
     
     if (resp.status !== 200) {
       throw new Error(`Weather API returned status ${resp.status}`);
     }
     
-    return { zip, data: resp.data };
+    return { location, data: resp.data };
   }
 
   mapToDashboard(apiResults, config) {
     if (!Array.isArray(apiResults) || apiResults.length === 0) {
       throw new Error('No weather data available');
     }
+
+    const unitSystem = this.unitSystem;
 
     // Extract timezone from first location for date parsing
     const locationTimezone = apiResults[0]?.data?.timezone || 'America/Los_Angeles';
@@ -91,7 +129,7 @@ class WeatherService extends BaseService {
     };
 
     // Extract and transform data from raw API response
-    const processedLocations = apiResults.map(({ zip, data }) => {
+    const processedLocations = apiResults.map(({ location: originalQuery, data }) => {
       const forecastDays = data?.days || [];
       const current = data?.currentConditions || {};
       
@@ -99,60 +137,58 @@ class WeatherService extends BaseService {
       // Visual Crossing returns "ZIP, Country" for ZIP queries, not city names
       const resolvedAddress = data?.resolvedAddress || '';
       
-      let location;
-      if (resolvedAddress.startsWith(zip)) {
-        // Visual Crossing didn't resolve the ZIP to a city name
-        // Use zipcodes package to lookup city/state from ZIP
-        const zipInfo = zipcodes.lookup(zip);
-        location = {
-          name: zipInfo?.city || zip, // Use city name or fall back to ZIP
-          region: zipInfo?.state || '',
-          country: 'US',
-          tz_id: data?.timezone || locationTimezone,
-        };
-      } else {
-        // resolvedAddress has actual city/state info
-        const addressParts = resolvedAddress.split(',').map(s => s.trim());
-        location = {
-          name: addressParts[0] || zip,
-          region: addressParts[1] || '',
-          country: addressParts[2] || 'US',
-          tz_id: data?.timezone || locationTimezone,
-        };
-      }
+      const location = this.parseLocationMetadata(originalQuery, resolvedAddress, data?.timezone || locationTimezone);
+
+      const temp = this.normalizeTemperature(current.temp);
+      const feelsLike = this.normalizeTemperature(current.feelslike);
+      const windspeed = this.normalizeWindSpeed(current.windspeed);
+      const pressure = this.normalizePressure(current.pressure);
       
       const today = forecastDays[0];
 
       return {
-        zip,
+        query: originalQuery,
         location,
         current: {
-          temp_f: current.temp,
-          feels_like_f: current.feelslike,
+          temp_f: temp.f,
+          temp_c: temp.c,
+          feels_like_f: feelsLike.f,
+          feels_like_c: feelsLike.c,
           humidity: current.humidity,
-          pressure_in: current.pressure,
-          wind_mph: current.windspeed,
+          pressure_in: pressure.inHg,
+          pressure_hpa: pressure.hPa,
+          wind_mph: windspeed.mph,
+          wind_kmh: windspeed.kmh,
           wind_dir: current.winddir,
           condition: current.conditions,
           pm2_5: current.pm2p5, // PM2.5 particulate matter
           aqi: current.aqius, // US EPA Air Quality Index
         },
         forecast: forecastDays.map(day => {
+          const high = this.normalizeTemperature(day.tempmax);
+          const low = this.normalizeTemperature(day.tempmin);
+          const precip = this.normalizePrecipitation(day.precip);
+
           return {
             date: day.datetime,
             day_of_week: getDayOfWeek(day.datetime),
-            high_f: day.tempmax,
-            low_f: day.tempmin,
+            high_f: high.f,
+            high_c: high.c,
+            low_f: low.f,
+            low_c: low.c,
             condition: day.conditions,
             rain_chance: day.precipprob,
-            precip_in: day.precip,
+            precip_in: precip.in,
+            precip_mm: precip.mm,
             avghumidity: day.humidity,
             hour: (day.hours || []).map(h => ({
               time: h.datetime,
-              temp_f: h.temp,
+              temp_f: this.normalizeTemperature(h.temp).f,
+              temp_c: this.normalizeTemperature(h.temp).c,
               condition: h.conditions,
               rain_chance: h.precipprob,
-              wind_mph: h.windspeed,
+              wind_mph: this.normalizeWindSpeed(h.windspeed).mph,
+              wind_kmh: this.normalizeWindSpeed(h.windspeed).kmh,
             })),
           };
         }),
@@ -173,22 +209,42 @@ class WeatherService extends BaseService {
       // Use current actual conditions, not forecast
       const { icon } = mapIconAndDescription(loc.current.condition || '');
       const condition = loc.current.condition || 'Clear';
+      const currentTemp = this.unitSystem === 'metric' ? loc.current.temp_c : loc.current.temp_f;
+      const highTemp = this.unitSystem === 'metric' ? today?.high_c : today?.high_f;
+      const lowTemp = this.unitSystem === 'metric' ? today?.low_c : today?.low_f;
+      const windSpeed = this.unitSystem === 'metric' ? loc.current.wind_kmh : loc.current.wind_mph;
+      const pressure = this.unitSystem === 'metric' ? loc.current.pressure_hpa : loc.current.pressure_in;
       
       return {
         name: loc.location.name,
         region: loc.location.region,
         country: loc.location.country,
-        zip_code: loc.zip,
-        current_temp: Math.round(Number(loc.current.temp_f || 0)),
-        high: Math.round(Number(today?.high_f || 0)),
-        low: Math.round(Number(today?.low_f || 0)),
+        query: loc.query,
+        current_temp: Math.round(Number(currentTemp || 0)),
+        current_temp_f: Math.round(Number(loc.current.temp_f || 0)),
+        current_temp_c: Math.round(Number(loc.current.temp_c || 0)),
+        feels_like: Math.round(Number((this.unitSystem === 'metric' ? loc.current.feels_like_c : loc.current.feels_like_f) || currentTemp || 0)),
+        feels_like_f: Math.round(Number(loc.current.feels_like_f || loc.current.temp_f || 0)),
+        feels_like_c: Math.round(Number(loc.current.feels_like_c || loc.current.temp_c || 0)),
+        high: Math.round(Number(highTemp || 0)),
+        high_f: Math.round(Number(today?.high_f || 0)),
+        high_c: Math.round(Number(today?.high_c || 0)),
+        low: Math.round(Number(lowTemp || 0)),
+        low_f: Math.round(Number(today?.low_f || 0)),
+        low_c: Math.round(Number(today?.low_c || 0)),
         icon,
         condition,
         rain_chance: Number(today?.rain_chance || 0),
         // Current conditions data (used as fallback if Ambient Weather unavailable)
         humidity: Math.round(Number(loc.current.humidity || 0)),
-        pressure: Math.round(Number(loc.current.pressure_in || 0) * 100) / 100,
+        pressure: this.unitSystem === 'metric'
+          ? Math.round(Number(pressure || 0))
+          : Math.round(Number(pressure || 0) * 100) / 100,
+        pressure_in: Math.round(Number(loc.current.pressure_in || 0) * 100) / 100,
+        pressure_hpa: Math.round(Number(loc.current.pressure_hpa || 0)),
         wind_mph: Math.round(Number(loc.current.wind_mph || 0) * 10) / 10,
+        wind_kmh: Math.round(Number(loc.current.wind_kmh || 0) * 10) / 10,
+        wind_speed: Math.round(Number(windSpeed || 0) * 10) / 10,
         wind_dir: loc.current.wind_dir || 0,
       };
     });
@@ -196,11 +252,17 @@ class WeatherService extends BaseService {
     // Build 5-day forecast (skip today, show next 5 days)
     const allForecast = mainLocation.forecast.map(day => {
       const { icon } = mapIconAndDescription(day.condition || '');
+      const high = this.unitSystem === 'metric' ? day.high_c : day.high_f;
+      const low = this.unitSystem === 'metric' ? day.low_c : day.low_f;
       return {
         date: day.date,
         day: day.day_of_week,
-        high: Math.round(Number(day.high_f || 0)),
-        low: Math.round(Number(day.low_f || 0)),
+        high: Math.round(Number(high || 0)),
+        high_f: Math.round(Number(day.high_f || 0)),
+        high_c: Math.round(Number(day.high_c || 0)),
+        low: Math.round(Number(low || 0)),
+        low_f: Math.round(Number(day.low_f || 0)),
+        low_c: Math.round(Number(day.low_c || 0)),
         icon,
         rain_chance: Number(day.rain_chance || 0),
       };
@@ -215,7 +277,7 @@ class WeatherService extends BaseService {
     const forecast = allForecast.slice(startIndex, startIndex + 5);
 
     // Build hourly forecast (next 24 hours)
-    const hourlyForecast = this.getNext24Hours(mainLocation.forecast);
+  const hourlyForecast = this.getNext24Hours(mainLocation.forecast);
 
     // Use AQI from Visual Crossing if available, otherwise calculate from PM2.5
     let aqi = mainLocation.current.aqi;
@@ -228,10 +290,11 @@ class WeatherService extends BaseService {
     const { phase, direction } = this.mapMoonPhase(mainLocation.astro.moon_phase);
 
     // Precipitation totals
-    const total24h = mainLocation.forecast[0]?.precip_in || 0;
-    const weekTotal = mainLocation.forecast.slice(0, 7).reduce(
-      (sum, d) => sum + Number(d.precip_in || 0), 0
-    );
+    const total24hIn = Number(mainLocation.forecast[0]?.precip_in || 0);
+    const total24hMm = Number(mainLocation.forecast[0]?.precip_mm || 0);
+
+    const weekTotalsIn = mainLocation.forecast.slice(0, 7).reduce((sum, d) => sum + Number(d.precip_in || 0), 0);
+    const weekTotalsMm = mainLocation.forecast.slice(0, 7).reduce((sum, d) => sum + Number(d.precip_mm || 0), 0);
 
     return {
       locations,
@@ -249,9 +312,25 @@ class WeatherService extends BaseService {
       },
       air_quality: aqi != null ? { aqi, category: aqiCategory } : { aqi: null, category: 'Unknown' },
       precipitation: {
-        last_24h_in: Number(total24h.toFixed(2)),
-        week_total_in: Number(weekTotal.toFixed(2)),
-        year_total_in: null,
+        last_24h: Number((this.unitSystem === 'metric' ? total24hMm : total24hIn).toFixed(2)),
+        last_24h_in: Number(total24hIn.toFixed(2)),
+        last_24h_mm: Number(total24hMm.toFixed(2)),
+        week_total: Number((this.unitSystem === 'metric' ? weekTotalsMm : weekTotalsIn).toFixed(2)),
+        week_total_in: Number(weekTotalsIn.toFixed(2)),
+        week_total_mm: Number(weekTotalsMm.toFixed(2)),
+        year_total: null,
+        units: this.unitSystem === 'metric' ? 'mm' : 'in',
+      },
+      units: {
+        system: this.unitSystem,
+        temperature: this.unitSystem === 'metric' ? '°C' : '°F',
+        temperature_secondary: this.unitSystem === 'metric' ? '°F' : '°C',
+        wind_speed: this.unitSystem === 'metric' ? 'km/h' : 'mph',
+        wind_speed_secondary: this.unitSystem === 'metric' ? 'mph' : 'km/h',
+        precipitation: this.unitSystem === 'metric' ? 'mm' : 'in',
+        precipitation_secondary: this.unitSystem === 'metric' ? 'in' : 'mm',
+        pressure: this.unitSystem === 'metric' ? 'hPa' : 'inHg',
+        pressure_secondary: this.unitSystem === 'metric' ? 'inHg' : 'hPa',
       },
     };
   }
@@ -280,13 +359,30 @@ class WeatherService extends BaseService {
         const hourNum = hour % 12 || 12;
         const ampm = hour < 12 ? 'AM' : 'PM';
         
+        const tempF = Math.round(Number(hourData.temp_f || 0));
+        const tempC = Math.round(Number(hourData.temp_c || 0));
+        const windMph = Math.round(Number(hourData.wind_mph || 0));
+        const windKmh = Math.round(Number(hourData.wind_kmh || 0));
+
+        const displayTemp = this.unitSystem === 'metric' ? hourData.temp_c : hourData.temp_f;
+        const fallbackTemp = this.unitSystem === 'metric' ? hourData.temp_f : hourData.temp_c;
+        const resolvedTemp = displayTemp != null ? displayTemp : fallbackTemp;
+
+        const displayWind = this.unitSystem === 'metric' ? hourData.wind_kmh : hourData.wind_mph;
+        const fallbackWind = this.unitSystem === 'metric' ? hourData.wind_mph : hourData.wind_kmh;
+        const resolvedWind = displayWind != null ? displayWind : fallbackWind;
+
         hourlyData.push({
           time: `${hourNum} ${ampm}`,
-          temp_f: Math.round(Number(hourData.temp_f || 0)),
+          temp: resolvedTemp != null ? Math.round(Number(resolvedTemp)) : null,
+          temp_f: tempF,
+          temp_c: tempC,
           condition: hourData.condition || 'Unknown',
           icon,
           rain_chance: Number(hourData.rain_chance || 0),
-          wind_mph: Math.round(Number(hourData.wind_mph || 0)),
+          wind_speed: resolvedWind != null ? Math.round(Number(resolvedWind)) : null,
+          wind_mph: windMph,
+          wind_kmh: windKmh,
         });
       }
     }
@@ -400,6 +496,120 @@ class WeatherService extends BaseService {
     if (t.includes('waxing') && t.includes('gibbous')) return { phase: 'waxing_gibbous', direction: 'waxing' };
     if (t.includes('waning') && t.includes('gibbous')) return { phase: 'waning_gibbous', direction: 'waning' };
     return { phase: 'new', direction: 'waxing' };
+  }
+
+  parseLocationMetadata(originalQuery, resolvedAddress, timezone) {
+    const timezoneId = timezone || 'UTC';
+    const parts = (resolvedAddress || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    if (parts.length >= 3) {
+      return {
+        name: parts[0],
+        region: parts.slice(1, parts.length - 1).join(', '),
+        country: parts[parts.length - 1],
+        tz_id: timezoneId,
+      };
+    }
+
+    if (parts.length === 2) {
+      return {
+        name: parts[0],
+        region: '',
+        country: parts[1],
+        tz_id: timezoneId,
+      };
+    }
+
+    return {
+      name: parts[0] || originalQuery,
+      region: parts[1] || '',
+      country: parts[2] || '',
+      tz_id: timezoneId,
+    };
+  }
+
+  normalizeTemperature(value) {
+    if (value == null || value === '') {
+      return { f: null, c: null };
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return { f: null, c: null };
+    }
+
+    if (this.unitSystem === 'metric') {
+      const c = numeric;
+      const f = (c * 9) / 5 + 32;
+      return { c, f };
+    }
+
+    const f = numeric;
+    const c = (f - 32) * 5 / 9;
+    return { f, c };
+  }
+
+  normalizeWindSpeed(value) {
+    if (value == null || value === '') {
+      return { mph: null, kmh: null };
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return { mph: null, kmh: null };
+    }
+
+    if (this.unitSystem === 'metric') {
+      const kmh = numeric;
+      const mph = kmh / 1.60934;
+      return { kmh, mph };
+    }
+
+    const mph = numeric;
+    const kmh = mph * 1.60934;
+    return { mph, kmh };
+  }
+
+  normalizePrecipitation(value) {
+    if (value == null || value === '') {
+      return { in: 0, mm: 0 };
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return { in: 0, mm: 0 };
+    }
+
+    if (this.unitSystem === 'metric') {
+      const mm = numeric;
+      const inches = mm / 25.4;
+      return { mm, in: inches };
+    }
+
+    const inches = numeric;
+    const mm = inches * 25.4;
+    return { in: inches, mm };
+  }
+
+  normalizePressure(value) {
+    if (value == null || value === '') {
+      return { inHg: null, hPa: null };
+    }
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return { inHg: null, hPa: null };
+    }
+
+    if (this.unitSystem === 'metric') {
+      const hPa = numeric;
+      const inHg = hPa * 0.0295299830714;
+      return { hPa, inHg };
+    }
+
+    const inHg = numeric;
+    const hPa = inHg * 33.8638866667;
+    return { inHg, hPa };
   }
 }
 

@@ -118,31 +118,52 @@ class AmbientService extends BaseService {
 
   mapToDashboard(apiData, config) {
     const tempF = Number(apiData.tempf) || 0;
+    const tempC = (tempF - 32) * 5 / 9;
     const feelsLikeF = Number(apiData.feelsLike || apiData.feelslikef) || tempF;
+    const feelsLikeC = (feelsLikeF - 32) * 5 / 9;
     const humidity = Number(apiData.humidity) || 0;
     const windSpeedMph = Number(apiData.windspeedmph) || 0;
+    const windSpeedKmh = windSpeedMph * 1.60934;
     const windDir = apiData.winddir || 0;
     const pressureInHg = Number(apiData.baromrelin || apiData.baromabsin) || 0;
+    const pressureHpa = pressureInHg * 33.8638866667;
     const rainRate = Number(apiData.rainratein) || 0;
     const solarRadiation = Number(apiData.solarradiation) || 0;
 
     const windDirection = getWindDirection(windDir);
 
     return {
-      current_temp: Math.round(tempF * 10) / 10,
-      feels_like: Math.round(feelsLikeF * 10) / 10,
+  current_temp_f: Math.round(tempF * 10) / 10,
+  current_temp_c: Math.round(tempC * 10) / 10,
+  current_temp: Math.round(tempF * 10) / 10,
+  feels_like_f: Math.round(feelsLikeF * 10) / 10,
+  feels_like_c: Math.round(feelsLikeC * 10) / 10,
+  feels_like: Math.round(feelsLikeF * 10) / 10,
       humidity: Math.round(humidity),
-      pressure: Math.round(pressureInHg * 100) / 100,
+  pressure_in: Math.round(pressureInHg * 100) / 100,
+  pressure: Math.round(pressureInHg * 100) / 100,
+      pressure_hpa: Math.round(pressureHpa),
       wind: {
         speed_mph: Math.round(windSpeedMph * 10) / 10,
+        speed_kmh: Math.round(windSpeedKmh * 10) / 10,
         direction: windDirection,
       },
       precipitation: {
         last_24h_in: Math.round(Number(apiData.dailyrainin || 0) * 100) / 100,
+        last_24h_mm: Math.round(Number(apiData.dailyrainin || 0) * 2540) / 100,
         week_total_in: Math.round(Number(apiData.weeklyrainin || 0) * 100) / 100,
+        week_total_mm: Math.round(Number(apiData.weeklyrainin || 0) * 2540) / 100,
         month_total_in: Math.round(Number(apiData.monthlyrainin || 0) * 100) / 100,
+        month_total_mm: Math.round(Number(apiData.monthlyrainin || 0) * 2540) / 100,
         year_total_in: Math.round(Number(apiData.yearlyrainin || 0) * 100) / 100,
+        year_total_mm: Math.round(Number(apiData.yearlyrainin || 0) * 2540) / 100,
+        last_24h: Math.round(Number(apiData.dailyrainin || 0) * 100) / 100,
+        week_total: Math.round(Number(apiData.weeklyrainin || 0) * 100) / 100,
+        month_total: Math.round(Number(apiData.monthlyrainin || 0) * 100) / 100,
+        year_total: Math.round(Number(apiData.yearlyrainin || 0) * 100) / 100,
+        units: 'in',
       },
+      solar_radiation: solarRadiation,
     };
   }
 

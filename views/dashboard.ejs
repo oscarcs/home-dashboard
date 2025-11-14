@@ -102,6 +102,20 @@
       
       return weatherIconMap[code] || weatherIconMap['default'];
     };
+
+    const temperatureSymbol = (() => {
+      if (typeof units !== 'undefined' && units && units.temperature) {
+        const rawUnit = String(units.temperature);
+        const stripped = rawUnit.replace(/[A-Za-z]/g, '').trim();
+        return stripped || '°';
+      }
+      return '°';
+    })();
+    const windSpeedUnit = (typeof units !== 'undefined' && units && units.wind_speed) ? units.wind_speed : 'mph';
+  const precipitationUnit = (precipitation && precipitation.units) ? precipitation.units : 'in';
+  const precipitationSuffix = precipitationUnit === 'mm' ? 'mm' : '"';
+  const formatPrecip = (value) => (value === null || typeof value === 'undefined') ? '--' : Number(value).toFixed(2);
+  const formatWindSpeed = (value) => (value === null || typeof value === 'undefined' || Number.isNaN(Number(value))) ? '--' : Number(value).toFixed(1);
     
     // Helper function to generate moon phase SVG
     const getMoonPhaseSVG = (phase, direction, illumination) => {
@@ -204,8 +218,8 @@
       <div class="main-weather-icon">
         <i class="ph <%= getWeatherIcon(weather_icon) %>"></i>
       </div>
-      <div class="big-temp"><%= Math.round(current_temp) %>°</div>
-      <div class="text-sm">Feels like <%= Math.round(feels_like) %>°</div>
+  <div class="big-temp"><%= Math.round(current_temp) %><%= temperatureSymbol %></div>
+  <div class="text-sm">Feels like <%= Math.round(feels_like) %><%= temperatureSymbol %></div>
       <div class="text-sm flex items-center nowrap" style="margin-top: 8px; gap: 6px">
         <i class="ph-bold ph-sun-horizon icon-sm"></i>
         <div>
@@ -240,12 +254,12 @@
       </div>
       <div class="flex flex-col flex-1" style="justify-content: center; gap: 12px; padding-top: 4px">
         <div class="text-lg flex" style="margin-left: -8px; gap: 2px; align-items: baseline; justify-content: center">
-          <%= Math.round(locations[0].high) %>°
+          <%= Math.round(locations[0].high) %><%= temperatureSymbol %>
           <div class="text-label-sm">High</div>
         </div>
         <div class="text-lg flex" style="gap: 7px; align-items: end; justify-content: center;">
           <div class="text-label-sm">Low</div>
-          <%= Math.round(locations[0].low) %>°
+          <%= Math.round(locations[0].low) %><%= temperatureSymbol %>
         </div>
       </div>
     </div>
@@ -271,6 +285,7 @@
             const container = document.getElementById('forecast-graph');
             const svg = document.getElementById('forecast-svg');
             const columns = container.querySelectorAll('.forecast-column');
+            const tempSymbol = "<%= temperatureSymbol %>";
             
             if (!container || !svg || columns.length === 0) {
               console.error('Forecast elements not found');
@@ -352,7 +367,7 @@
                   icon.className = 'ph-bold icon-sm ' + iconClass;
                 }
                 if (tempValue) {
-                  tempValue.textContent = point.temp + '°';
+                  tempValue.textContent = point.temp + tempSymbol;
                 }
                 
                 tempLabel.style.top = (point.y - 18) + 'px';
@@ -377,8 +392,8 @@
       %>
       <div class="flex items-center text-label">
         <div class="flex-1"><%= locations[i].name %></div>
-        <i class="ph-bold icon-sm <%= getWeatherIcon(locations[i].icon, false) %>" style="margin-right: 6px;"></i>
-        <%= Math.round(locations[i].current_temp) %>°
+    <i class="ph-bold icon-sm <%= getWeatherIcon(locations[i].icon, false) %>" style="margin-right: 6px;"></i>
+  <%= Math.round(locations[i].current_temp) %><%= temperatureSymbol %>
       </div>
       <%
         }
@@ -396,17 +411,17 @@
             <div class="dot-leader">
               <span class="label">24h</span>
               <span class="dots"></span>
-              <span class="value"><%= precipitation && precipitation.last_24h_in !== null ? precipitation.last_24h_in.toFixed(2) : '0.00' %>"</span>
+              <span class="value"><%= precipitation ? formatPrecip(precipitation.last_24h) : '--' %><%= precipitationSuffix %></span>
             </div>
             <div class="dot-leader">
               <span class="label">7d</span>
               <span class="dots"></span>
-              <span class="value"><%= precipitation && precipitation.week_total_in !== null ? precipitation.week_total_in.toFixed(2) : '0.00' %>"</span>
+              <span class="value"><%= precipitation ? formatPrecip(precipitation.week_total) : '--' %><%= precipitationSuffix %></span>
             </div>
             <div class="dot-leader">
               <span class="label">YTD</span>
               <span class="dots"></span>
-              <span class="value"><%= precipitation && precipitation.year_total_in !== null ? precipitation.year_total_in.toFixed(2) : '0.00' %>"</span>
+              <span class="value"><%= precipitation ? formatPrecip(precipitation.year_total) : '--' %><%= precipitationSuffix %></span>
             </div>
           </div>
         </div>
@@ -416,7 +431,8 @@
         </div>
         <div class="stat">
           <i class="icon ph-bold ph-wind"></i>
-          <%= wind.speed_mph %>mph
+          <% const windDisplay = formatWindSpeed(wind && wind.speed); %>
+          <%= windDisplay %><%= windDisplay === '--' ? '' : windSpeedUnit %>
         </div>
         <div class="stat">
           <div class="moon-icon">

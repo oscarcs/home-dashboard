@@ -39,18 +39,22 @@ cp .env.example .env
 ```
 
 Edit `.env` and set at minimum:
+
 ```bash
-MAIN_LOCATION_ZIP=94607
+# Example for Australia / metric users
+MAIN_LOCATION="Sydney, NSW, AU"
+WEATHER_UNIT_SYSTEM=metric
 VISUAL_CROSSING_API_KEY=your_key_here
 ```
 
 **Required:**
-- `MAIN_LOCATION_ZIP` - Your primary 5-digit US ZIP code
-- `VISUAL_CROSSING_API_KEY` - Weather forecast API key (see below)
+- `MAIN_LOCATION` – Set a human-readable location (`City, Region, Country`)
+- `VISUAL_CROSSING_API_KEY` – Weather forecast API key (see below)
 
 **Optional:**
-- `ADDITIONAL_LOCATION_ZIPS` - Up to 3 additional ZIP codes (comma-separated)
-- `PORT` - Server port (default: 7272)
+- `ADDITIONAL_LOCATIONS` – Up to 3 additional locations separated by newlines or `|`
+- `WEATHER_UNIT_SYSTEM` – `us` (Fahrenheit, mph, inches) or `metric` (Celsius, km/h, mm); defaults to `us`
+- `PORT` – Server port (default: 7272)
 - See `.env.example` for all configuration options
 
 ### 3. Start the Server
