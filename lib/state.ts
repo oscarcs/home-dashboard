@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { STATE_PATH, ensureDataDir } from './paths.js';
-import type { StateData } from './types.js';
+import { STATE_PATH, ensureDataDir } from './paths';
+import type { StateData } from './types';
 
 ensureDataDir();
 

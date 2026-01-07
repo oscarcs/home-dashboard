@@ -7,3 +7,9 @@ node_modules
 !/views/styles/fonts/.gitkeep
 dist/
 *.tsbuildinfo
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+.vercel

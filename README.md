@@ -2,14 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org/)
-[![PM2](https://img.shields.io/badge/PM2-Daemon-blue)](https://pm2.keymetrics.io/)
-[![Status](https://img.shields.io/badge/status-production-success)](https://github.com/kyleturman/home-dashboard)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1-black)](https://nextjs.org/)
+[![Status](https://img.shields.io/badge/status-production-success)](https://github.com/oscarcs/home-dashboard)
 
-A home dashboard that runs a server on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and creates a dashboard of weather forecasts and news.
+A modern home dashboard built with Next.js that runs on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and displays weather forecasts, calendar events, and AI-generated insights.
 
 ## Getting Started
 
-This dashboard is designed to run as a persistent background service on an always-on computer within your local network. It uses **PM2** as a process manager to run the Node.js server as a daemon—automatically restarting on crashes and optionally starting on boot.
+This dashboard is built with **Next.js 16** using the App Router, React Server Components, and TypeScript. It's designed to run as a persistent service on an always-on computer within your local network.
 
 ### Prerequisites
 - **Node.js** (v16 or higher)
@@ -18,7 +18,7 @@ This dashboard is designed to run as a persistent background service on an alway
 
 ### 1. Install Dependencies
 ```bash
-git clone https://github.com/kyleturman/home-dashboard.git
+git clone https://github.com/oscarcs/home-dashboard.git
 cd home-dashboard
 npm install
 ```
@@ -28,36 +28,29 @@ npm install
 cp .env.example .env
 ```
 
+Edit `.env` and add your API keys (see API Keys section below).
+
 ### 3. Start the Server
+
+**Development:**
 ```bash
-npm start      # Start as PM2 daemon (auto-restarts on crash)
-npm stop       # Stop the service
-npm restart    # Restart (reloads .env)
-npm run logs   # View live logs
+npm run dev        # Start Next.js dev server with hot reload
 ```
 
-The server runs on **port 7272** by default via PM2 process manager.
-
-### 4. Enable Auto-Start on Boot (Optional)
-
-To have the dashboard automatically start when your server reboots:
-
+**Production:**
 ```bash
-# Generate and install startup script
-npx pm2 startup
-
-# Follow the command it outputs (may require sudo)
-# Then save the current PM2 process list
-npx pm2 save
+npm run build      # Build for production
+npm start          # Start production server
 ```
 
-This is **highly recommended** to ensure the dashboard restarts after power loss or system updates.
+The server runs on **port 7272** by default.
 
-### 5. Access the Dashboard
+### 4. Access the Dashboard
 
 **Core routes:**
+- Home: `http://localhost:7272`
 - Dashboard: `http://localhost:7272/dashboard`
-- E-paper 1-bit PNG image: `http://localhost:7272/dashboard/image`
+- E-paper 1-bit PNG image: `http://localhost:7272/api/dashboard/image`
 - Admin panel: `http://localhost:7272/admin`
 
 **API endpoints (used for debugging and custom development):**
@@ -66,28 +59,13 @@ This is **highly recommended** to ensure the dashboard restarts after power loss
 
 ## API Keys & Provider Setup
 
-### Visual Crossing Weather (Required)
-Multi-location forecasts, hourly data, and astronomy information. Visual Crossing provides a free tier of 1,000 calls per day and seems the most robust and accurate of free weather APIs from my research.
+### Google Weather API (Required)
+Multi-location forecasts, hourly data, and astronomy information.
 
-1. Sign up at [visualcrossing.com/weather-api](https://www.visualcrossing.com/weather-api)
-2. Free tier: 1,000 calls/day
-3. Get your API key from the account dashboard
-4. Add to `.env`: `VISUAL_CROSSING_API_KEY=your_key_here`
-
-### Ambient Weather (Optional)
-Have a personal weather station from [Ambient Weather](https://ambientweather.com/)? Get real-time data from your home station.
-
-1. Own an Ambient Weather station (The [AMWS1965](https://ambientweather.com/amws1965-wifi-weather-station-with-remote-monitoring) is the most affordable starter option)
-2. Create account at [ambientweather.net](https://ambientweather.net/)
-3. Navigate to Account → API Keys
-4. Generate Application and API keys
-5. Add to `.env`:
-   ```bash
-   AMBIENT_APPLICATION_KEY=your_app_key
-   AMBIENT_API_KEY=your_api_key
-   # AMBIENT_DEVICE_MAC=optional (auto-discovers if omitted)
-   ```
-This will override current weather data (temperature, humidity, precipitation, etc.) from the main weather API.
+1. Sign up at [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable the **Google Weather API**
+3. Get your API key
+4. Add to `.env`: `GOOGLE_MAPS_API_KEY=your_key_here`
 
 ### Google Calendar (Optional)
 Display upcoming calendar events.
@@ -102,16 +80,25 @@ Display upcoming calendar events.
    ```bash
    GOOGLE_CLIENT_ID=your_client_id
    GOOGLE_CLIENT_SECRET=your_client_secret
-   GOOGLE_REDIRECT_URI=http://localhost:7272/auth/google/callback # If you change the port, you must update this
+   GOOGLE_REDIRECT_URI=http://localhost:7272/api/auth/google/callback # If you change the port, you must update this
    ```
-8. Visit `http://localhost:7272/admin` and click "Connect Google Calendar"
+8. Visit `http://localhost:7272/admin` and click "Authenticate"
 
 ### LLM (Optional)
-AI-generated daily insights and clothing suggestions, using Anthropic Claude by default (other providers can be added by modifying the `llmService.js` file, but Claude 3.5 Haiku is quite cost-effective at just a few cents per month).
+AI-generated daily insights and clothing suggestions, using Anthropic Claude by default (other providers can be added by modifying `services/llmService.ts`, but Claude 3.5 Haiku is quite cost-effective at just a few cents per month).
 
 1. Sign up at [console.anthropic.com](https://console.anthropic.com/)
 2. Navigate to API Keys and generate a new key
 3. Add to `.env`: `ANTHROPIC_API_KEY=your_api_key`
+
+## Technology Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **Styling:** CSS + Tailwind CSS (utility classes)
+- **UI Icons:** Phosphor Icons
+- **Image Processing:** Puppeteer + Sharp (for e-paper generation)
+- **APIs:** Google Weather, Google Calendar, Anthropic Claude, Ambient Weather
 
 ## Admin Panel
 
@@ -124,67 +111,88 @@ OAuth tokens are stored in `data/auth.json` and persist across restarts.
 
 ## Developing
 
-This project is designed to be modular and easy to customize, with each service (weather, calendar, etc.) implemented as a separate class that is built to a single data object sent to the dashboard.
+This project is built with **Next.js 16**. Each service (weather, calendar, etc.) is implemented as a separate TypeScript class that builds to a single data object sent to the dashboard.
 
 ### Development Commands
 
 ```bash
-# Test individual services
-npm run test-service weather   # Visual Crossing API
-npm run test-service ambient   # Ambient Weather Station
-npm run test-service calendar  # Google Calendar
-npm run test-service llm       # Claude AI
+# Development
+npm run dev        # Start Next.js dev server with hot reload
+npm run build      # Build for production
+npm start          # Start production server
+npm run typecheck  # Type check TypeScript
+```
 
-# Process management
-npm start      # Start PM2 daemon
-npm stop       # Stop daemon
-npm restart    # Restart (reloads .env)
-npm run logs   # View logs
+### Project Structure
 
-# PM2 commands
-npx pm2 list   # List all processes
-npx pm2 monit  # Monitor resources
+```
+src/
+  app/                    # Next.js App Router
+    api/                  # API routes (serverless functions)
+      admin/
+      auth/
+      dashboard/
+      services/
+    admin/                # Admin panel page
+    dashboard/            # Dashboard page
+    layout.tsx            # Root layout
+    page.tsx              # Home page
+  components/             # Reusable React components
+
+lib/                      # Shared utilities
+  BaseService.ts          # Base class for all services
+  dataBuilder.ts          # Data aggregation logic
+  state.ts                # State management
+  types.ts                # TypeScript types
+  utils.ts                # Helper functions
+  weatherUtils.ts         # Weather-specific utilities
+
+services/                 # Data services
+  weatherService.ts       # Google Weather API (required)
+  ambientService.ts       # Personal weather station (optional)
+  calendarService.ts      # Google Calendar (optional)
+  llmService.ts           # Claude AI insights (optional)
+
+public/                   # Static assets
+  styles/                 # CSS files
+  assets/                 # Images, fonts
 ```
 
 ### Service Architecture
 
-All data services extend `BaseService` (`lib/BaseService.js`) which provides:
+All data services extend `BaseService` (`lib/BaseService.ts`) which provides:
 - Automatic caching with configurable TTL
 - Exponential backoff retry logic
 - Stale cache fallback on API failures
 - Status tracking
+- TypeScript type safety
 
-**Services are located in `services/`:**
-- `weatherApiService.js` - Visual Crossing forecasts (required)
-- `ambientService.js` - Personal weather station (optional)
-- `calendarService.js` - Google Calendar (optional)
-- `llmService.js` - Claude AI insights (optional)
+### Adding a New Service
 
-### Modifying Services
-
-Services are **modular** - you can easily add, remove, or swap them:
-
-1. **Add a new service:** Extend `BaseService` in `services/`, implement required methods
-2. **Integrate data:** Add service call in `lib/dataBuilder.js`
-3. **Test it:** Add to `scripts/test-service.js`
-4. **Update UI:** Modify `views/dashboard.ejs` to display the data
+1. **Create service file:** Extend `BaseService` in `services/`
+2. **Implement required methods:** `fetchData()` and `isEnabled()`
+3. **Add type definitions:** Update `lib/types.ts`
+4. **Integrate data:** Add service call in `lib/dataBuilder.ts`
+5. **Test it:** Add to `scripts/test-service.ts`
+6. **Update UI:** Modify React components to display the data
 
 ### Modifying the Dashboard UI
 
-**HTML/CSS changes:**
-1. Edit `views/dashboard.ejs` (EJS template)
-2. Edit styles in `views/styles/` (CSS files)
-3. Visit `http://localhost:7272/dashboard` to preview
-4. Check `http://localhost:7272/dashboard/image` for e-paper output
+**React/TypeScript changes:**
+1. Edit `src/app/dashboard/page.tsx` (Server Component)
+2. Edit `src/app/dashboard/DashboardClient.tsx` (Client Component)
+3. Edit styles in component CSS files
+4. Visit `http://localhost:7272/dashboard` to preview
+5. Check `http://localhost:7272/api/dashboard/image` for e-paper output
 
-**No server restart needed for view changes** - just refresh the browser.
+**Hot reload is enabled** - changes appear immediately in the browser.
 
 ### Development Resources
 
-- **`AGENTS.md`** - Comprehensive guide for AI-assisted development
-- **`lib/state.js`** - Centralized state management (all caches in `data/state.json`)
-- **`lib/dataBuilder.js`** - Data aggregation logic
-- **`routes/`** - Express route handlers
+- **`NEXT_MIGRATION.md`** - Migration guide from Express to Next.js
+- **`lib/state.ts`** - Centralized state management (caches in `data/state.json`)
+- **`lib/dataBuilder.ts`** - Data aggregation logic
+- **`src/app/api/`** - API route handlers (Next.js serverless functions)
 
 ## Arduino Setup (E-Paper Display)
 This sketch supports Seeed XIAO ESP32 microcontrollers and reTerminal E Series with 7.5" e-Paper displays. It may require modifications for other hardware.
@@ -222,7 +230,7 @@ Edit the Arduino sketch and replace the placeholder values at the top of the fil
 // Replace these template values:
 const char* WIFI_SSID = "{{WIFI_NAME}}";        // Your WiFi network name
 const char* WIFI_PASSWORD = "{{WIFI_PASSWORD}}"; // Your WiFi password
-const char* SERVER_IP = "{{SERVER_IP}}";         // Your server's local IP or name (e.g., "192.168.1.100" or "server-name.local)
+const char* SERVER_IP = "{{SERVER_IP}}";         // Your server's local IP or name (e.g., "192.168.1.100" or "server-name.local")
 const int SERVER_PORT = 7272;         // Your server port (default: 7272)
 ```
 

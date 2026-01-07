@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { BaseService } from '../lib/BaseService.js';
-import { mapIconAndDescription } from '../lib/weatherUtils.js';
+import { BaseService } from '../lib/BaseService';
+import { mapIconAndDescription } from '../lib/weatherUtils';
 import type {
   Logger,
   WeatherLocation,
@@ -11,7 +11,7 @@ import type {
   AirQualityData,
   PrecipitationData,
   Units,
-} from '../lib/types.js';
+} from '../lib/types';
 
 // ============================================================================
 // Google Maps Platform Weather API Response Types

@@ -1,11 +1,11 @@
 // @ts-nocheck - Services are not yet converted to TypeScript
-import { WeatherService } from '../services/weatherService.js';
-import { AmbientService } from '../services/ambientService.js';
-import { LLMService } from '../services/llmService.js';
-import { CalendarService } from '../services/calendarService.js';
-import { getStateKey, setStateKey } from './state.js';
-import { buildStaticDescription, getWindDirection } from './weatherUtils.js';
-import type { Request } from 'express';
+import { WeatherService } from '../services/weatherService';
+import { AmbientService } from '../services/ambientService';
+import { LLMService } from '../services/llmService';
+import { CalendarService } from '../services/calendarService';
+import { getStateKey, setStateKey } from './state';
+import { buildStaticDescription, getWindDirection } from './weatherUtils';
+import { getBaseUrl } from './utils';
 import type {
   DashboardData,
   Logger,
@@ -20,7 +20,7 @@ import type {
   ServiceStatus,
   Units,
   LLMInsights,
-} from './types.js';
+} from './types';
 
 interface AmbientData {
   current_temp?: number | null;
@@ -50,11 +50,11 @@ interface WeatherData {
  * Build complete dashboard data from all available services
  * Services fail gracefully - only WeatherAPI is required
  *
- * @param req - Express request object (for baseUrl)
+ * @param req - Request object with headers (for baseUrl)
  * @param logger - Logger instance
  * @returns Complete dashboard data model
  */
-export async function buildDashboardData(req: Request, logger: Logger = console): Promise<DashboardData> {
+export async function buildDashboardData(req: { headers: Record<string, string | string[] | undefined> }, logger: Logger = console): Promise<DashboardData> {
   const now = new Date();
   const formatTime = (date: Date): string => date.toISOString();
 
@@ -230,19 +230,6 @@ export async function buildDashboardData(req: Request, logger: Logger = console)
   };
 
   return data;
-}
-
-/**
- * Get base URL from request
- * @param req - Express request object
- * @returns Base URL
- */
-function getBaseUrl(req: Request): string {
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http')
-    .toString()
-    .split(',')[0];
-  const host = req.get('host');
-  return `${proto}://${host}`;
 }
 
 /**

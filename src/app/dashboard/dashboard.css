@@ -1,0 +1,296 @@
+/* Import base styles */
+@import url('base.css');
+
+html {
+  background: #000;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+body {
+  /* Width and height set via CSS variables from env config */
+  width: var(--display-width, 800px);
+  height: var(--display-height, 480px);
+  font-family: 'Geist Mono', 'SF Mono', 'Courier New', monospace;
+  font-weight: 400;
+  background: #FFFFFF;
+  color: #000;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  
+  /* Use font smoothing controls */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ----------------------------
+   Header
+---------------------------- */
+
+.header {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 28px;
+}
+
+.system-info {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  text-align: right;
+}
+
+.battery-warning {
+  display: inline-flex;
+  background: #000000;
+  color: #FFFFFF;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.battery {
+  width: 24px;
+  height: 14px;
+  display: inline-flex;
+  align-items: stretch;
+  position: relative;
+  border: 2px solid #000;
+  border-radius: 4px;
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-top: 1px;
+}
+
+.battery:after {
+  content: "";
+  background: #000;
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  width: 5px;
+  height: 9px;
+}
+
+.battery:before {
+  content: "";
+  top: 1px;
+  height: 100%;
+  background: #000;
+  width: calc(var(--battery-level) * 100%);
+}
+
+.current-conditions {
+  text-align: center;
+  padding: 0 20px 0 16px;
+}
+
+.main-weather-icon {
+  position: absolute;
+  top: 24px;
+  left: 32px;
+  font-size: 36px;
+}
+
+.big-temp {
+  font-size: 64px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -1px;
+  margin-left: 24px;
+  margin-bottom: 14px;
+}
+
+.weather-summary {
+  min-height: 2.75em;
+}
+
+.clothing-pill {
+  background: #000;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  font-weight: 600;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  margin-left: -2px;
+}
+
+/* ----------------------------
+   Main Weather
+---------------------------- */
+
+.main-weather {
+  border: 1px solid #000;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 220px 1fr 228px;
+  margin-bottom: 12px;
+  height: 112px;
+}
+
+.main-weather > *:not(:first-child) {
+  border-left: 1px #000 solid;
+}
+
+.main-weather > * {
+  padding: 20px;
+}
+
+.main-weather > :last-child {
+  padding-left: 22px;
+  padding-right: 16px;
+}
+
+/* 5 Day Forecast */
+.forecast-graph {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+.forecast-column {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.forecast-temp-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: -10px;
+  white-space: nowrap;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ----------------------------
+   Footer Grid
+---------------------------- */
+.footer {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.weather-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-left: 12px;
+}
+
+.weather-stats > :first-child {
+  grid-row: span 2;
+  width: 208px;
+  min-width: 0;
+}
+
+.weather-stats > :first-child > div {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.stat {
+  display: flex;
+  gap: 12px;
+}
+
+.stat i {
+  font-size: 20px;
+}
+
+/* Dot leader layout */
+.dot-leader {
+  display: flex;
+  align-items: baseline;
+  overflow: hidden;
+}
+
+.dot-leader .label {
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+
+.dot-leader .dots {
+  flex-grow: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.dot-leader .dots::after {
+  content: ".....................................................................";
+  letter-spacing: 2px;
+}
+
+.dot-leader .value {
+  flex-shrink: 0;
+  padding-left: 4px;
+  text-align: right;
+}
+
+.moon-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.aqi-pill {
+  background: #000;
+  color: #fff;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Calendar Events */
+.calendar-event {
+  border-left: 2px solid #000000;
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.calendar-event strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event:last-child {
+  border-bottom: none;
+}
+
+.calendar-empty {
+  padding: 32px 0;
+  text-align: center;
+  border: 1px dashed #000000;
+  border-radius: 12px;
+  margin-top: -4px;
+}

@@ -2,7 +2,7 @@
  * Weather utility functions shared across weather services
  */
 
-import type { CurrentWeather, ForecastDay, HourlyForecast, Units } from './types.js';
+import type { CurrentWeather, ForecastDay, HourlyForecast, Units } from './types';
 
 interface IconAndDescription {
   icon: string;

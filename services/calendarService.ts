@@ -1,9 +1,9 @@
 import fs from 'fs';
 import { google } from 'googleapis';
 import { OAuth2Client, Credentials } from 'google-auth-library';
-import { BaseService } from '../lib/BaseService.js';
-import { AUTH_PATH } from '../lib/paths.js';
-import type { Logger, CalendarEvent } from '../lib/types.js';
+import { BaseService } from '../lib/BaseService';
+import { AUTH_PATH } from '../lib/paths';
+import type { Logger, CalendarEvent } from '../lib/types';
 
 // ============================================================================
 // Google Calendar API Types

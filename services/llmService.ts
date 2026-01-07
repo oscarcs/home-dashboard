@@ -1,11 +1,11 @@
-import { BaseService } from '../lib/BaseService.js';
+import { BaseService } from '../lib/BaseService';
 import type {
   Logger,
   HourlyForecast,
   ForecastDay,
   MoonData,
   AirQualityData,
-} from '../lib/types.js';
+} from '../lib/types';
 
 // ============================================================================
 // LLM Service Types

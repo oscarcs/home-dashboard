@@ -1,4 +1,4 @@
-import { getStateKey, setStateKey } from './state.js';
+import { getStateKey, setStateKey } from './state';
 import type {
   BaseServiceOptions,
   ServiceStatus,
@@ -6,7 +6,7 @@ import type {
   ServiceCache,
   Logger,
   ServiceState,
-} from './types.js';
+} from './types';
 
 /**
  * Base class for all services with built-in caching, retry logic, and status tracking

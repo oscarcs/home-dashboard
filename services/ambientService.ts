@@ -1,9 +1,9 @@
 import axios from 'axios';
 import fs from 'fs';
-import { BaseService } from '../lib/BaseService.js';
-import { AUTH_PATH } from '../lib/paths.js';
-import { getWindDirection } from '../lib/weatherUtils.js';
-import type { Logger } from '../lib/types.js';
+import { BaseService } from '../lib/BaseService';
+import { AUTH_PATH } from '../lib/paths';
+import { getWindDirection } from '../lib/weatherUtils';
+import type { Logger } from '../lib/types';
 
 // ============================================================================
 // Ambient Weather API Response Types

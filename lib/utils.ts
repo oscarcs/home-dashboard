@@ -1,18 +1,17 @@
 import fs from 'fs';
-import type { Request } from 'express';
-import { AUTH_PATH } from './paths.js';
+import { AUTH_PATH } from './paths';
 
 /**
- * Get base URL from Express request
- * @param req - Express request object
+ * Get base URL from request headers
+ * @param req - Request object with headers
  * @returns Base URL (e.g., "http://localhost:7272")
  */
-export function getBaseUrl(req: Request): string {
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http')
-    .toString()
-    .split(',')[0];
-  const host = req.get('host');
-  return `${proto}://${host}`;
+export function getBaseUrl(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const proto = req.headers['x-forwarded-proto'] || 'http';
+  const protoStr = typeof proto === 'string' ? proto : proto?.[0] || 'http';
+  const host = req.headers.host || 'localhost';
+  const hostStr = typeof host === 'string' ? host : host?.[0] || 'localhost';
+  return `${protoStr.split(',')[0]}://${hostStr}`;
 }
 
 /**

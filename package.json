@@ -29,38 +29,30 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch server.ts",
-    "watch": "tsc --watch",
-    "start": "npm run build && pm2 start ecosystem.config.cjs",
-    "stop": "pm2 stop weather-dashboard",
-    "restart": "npm run build && pm2 restart weather-dashboard --update-env",
-    "logs": "pm2 logs weather-dashboard --lines 100",
-    "test-service": "npm run build && node dist/scripts/test-service.js",
+    "dev": "next dev -p 7272",
+    "build": "next build",
+    "start": "next start -p 7272",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
-    "ejs": "^3.1.9",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
     "googleapis": "^131.0.0",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
-    "phosphor-icons": "^1.4.2",
-    "pm2": "^6.0.13",
+    "next": "^16.1.1",
     "puppeteer": "^24.23.0",
-    "sharp": "^0.34.4",
-    "uuid": "^9.0.1"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "sharp": "^0.34.4"
   },
   "devDependencies": {
-    "@types/ejs": "^3.1.5",
-    "@types/express": "^5.0.6",
-    "@types/helmet": "^0.0.48",
-    "@types/morgan": "^1.9.10",
     "@types/node": "^25.0.3",
-    "@types/uuid": "^10.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
