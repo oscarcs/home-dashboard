@@ -1,18 +1,18 @@
 {
   "name": "home-dashboard",
   "version": "1.0.0",
-  "description": "Modular home dashboard with weather, calendar, vehicle data, and AI insights for e-paper displays",
+  "description": "Home dashboard for seeed studio",
   "main": "server.js",
-  "author": "Kyle Turman",
+  "author": "Oscar Sims and Kyle Turman",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kyleturman/home-dashboard.git"
+    "url": "https://github.com/oscarcs/home-dashboard.git"
   },
   "bugs": {
-    "url": "https://github.com/kyleturman/home-dashboard/issues"
+    "url": "https://github.com/oscarcs/home-dashboard/issues"
   },
-  "homepage": "https://github.com/kyleturman/home-dashboard#readme",
+  "homepage": "https://github.com/oscarcs/home-dashboard#readme",
   "keywords": [
     "dashboard",
     "e-paper",

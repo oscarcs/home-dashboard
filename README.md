@@ -5,17 +5,7 @@
 [![PM2](https://img.shields.io/badge/PM2-Daemon-blue)](https://pm2.keymetrics.io/)
 [![Status](https://img.shields.io/badge/status-production-success)](https://github.com/kyleturman/home-dashboard)
 
-A modular, open-source home dashboard that runs a server on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and creates a dashboard of weather forecasts, calendar events, vehicle data, and AI insights to be shown on an e-paper display.
-
-![E-paper Display](screenshots/display.png)
-
-This [tweet](https://x.com/kyleturman/status/1973774056064516346) blew up so I thought I'd share the code and make it a bit easier and more stable to run. The code (and definitely CSS lol) is generally a little messier than I would like, and the quality of the 1-bit image conversion is not perfect with font hinting issues, but done is better than perfect and it's a home project so c'est la vie!
-
-**How it works:** A Node.js server collects data from APIs, renders a dashboard as HTML/CSS, converts it to a 1-bit PNG image, and serves it over your local network available to a microcontroller-powered e-paper display that fetches the image and refreshes every 10 minutes (while sleeping from 12am-5am to save battery).
-
-## Disclaimer
-
-This project is provided **as-is** with no warranty or guarantee of support. It is not actively maintained but serves as a working example of a modular home dashboard system. Feel free to use it as a starting point for your own customizations. For development assistance, consider using [Claude Code](https://www.claude.com/product/claude-code) or other AI coding tools to extend functionality.
+A home dashboard that runs a server on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and creates a dashboard of weather forecasts and news.
 
 ## Getting Started
 
@@ -37,25 +27,6 @@ npm install
 ```bash
 cp .env.example .env
 ```
-
-Edit `.env` and set at minimum:
-
-```bash
-# Example for Australia / metric users
-MAIN_LOCATION="Sydney, NSW, AU"
-WEATHER_UNIT_SYSTEM=metric
-VISUAL_CROSSING_API_KEY=your_key_here
-```
-
-**Required:**
-- `MAIN_LOCATION` – Set a human-readable location (`City, Region, Country`)
-- `VISUAL_CROSSING_API_KEY` – Weather forecast API key (see below)
-
-**Optional:**
-- `ADDITIONAL_LOCATIONS` – Up to 3 additional locations separated by newlines or `|`
-- `WEATHER_UNIT_SYSTEM` – `us` (Fahrenheit, mph, inches) or `metric` (Celsius, km/h, mm); defaults to `us`
-- `PORT` – Server port (default: 7272)
-- See `.env.example` for all configuration options
 
 ### 3. Start the Server
 ```bash
@@ -80,7 +51,7 @@ npx pm2 startup
 npx pm2 save
 ```
 
-This is **highly recommended** to ensure the dashboard restarts after power loss or system updates and your display keeps on kickin'.
+This is **highly recommended** to ensure the dashboard restarts after power loss or system updates.
 
 ### 5. Access the Dashboard
 
@@ -248,14 +219,6 @@ Services are **modular** - you can easily add, remove, or swap them:
 ## Arduino Setup (E-Paper Display)
 This sketch supports Seeed XIAO ESP32 microcontrollers and reTerminal E Series with 7.5" e-Paper displays. It may require modifications for other hardware.
 
-### Hardware Requirements
-
-**Tested devices:**
-- [reTerminal E1002](https://www.seeedstudio.com/reTerminal-E1002-p-6535.html) with ESP32-S3 (Recommended - includes battery monitoring)
-- [XIAO 7.5" ePaper Panel](https://www.seeedstudio.com/XIAO-7-5-ePaper-Panel-p-6416.html) with XIAO ESP32-C3 or ESP32-S3
-- **7.5" e-Paper Display** (800x480 resolution, UC8179 controller)
-- USB-C cable for programming
-
 ### Arduino Code Location
 `arduino/epaper-client/epaper-client.ino`
 
@@ -327,7 +290,3 @@ const int SERVER_PORT = 7272;
 - Lower upload speed: Tools → Upload Speed → 115200
 - Press RESET button after clicking upload
 - See Arduino forum or Seeed Wiki for ESP32-C3 specific issues
-
-## License
-
-MIT - Free to use, modify, and distribute. No warranty provided.

@@ -21,84 +21,9 @@ class LLMService extends BaseService {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     return !!apiKey;
   }
-
-  // This uses the Anthropic Claude API, but can be swapped out
-  // for any other LLM provider by re-implementing fetchData()
-  // and updating the pricing constants below
-
-  // Claude 3.5 Haiku pricing per token
-  static PRICE_INPUT_PER_TOKEN = 0.80 / 1_000_000;   // $0.80 per million
-  static PRICE_OUTPUT_PER_TOKEN = 4.00 / 1_000_000;  // $4.00 per million
   
   async fetchData(config, logger) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-
-    const { systemPrompt, userMessage } = this.buildPrompt(config.input);
     
-    logger.info?.('[LLM] Calling Anthropic Claude API');
-
-    const response = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      {
-        model: 'claude-3-5-haiku-latest',
-        max_tokens: 300,
-        temperature: 0.5,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      },
-      {
-        timeout: 8000,
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-      }
-    );
-
-    const text = response?.data?.content?.[0]?.text || '';
-    logger.info?.('[LLM] Response:', text);
-
-    // Extract token usage and calculate cost
-    const usage = response?.data?.usage || {};
-    const inputTokens = usage.input_tokens || 0;
-    const outputTokens = usage.output_tokens || 0;
-    const costUsd = (inputTokens * LLMService.PRICE_INPUT_PER_TOKEN) + 
-                    (outputTokens * LLMService.PRICE_OUTPUT_PER_TOKEN);
-
-    logger.info?.(`[LLM] Tokens: ${inputTokens} input, ${outputTokens} output | Cost: $${costUsd.toFixed(6)}`);
-
-    let parsed;
-    try {
-      // Strip markdown code blocks just in case
-      let cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-      // Extract just the JSON object (in case LLM adds extra commentary)
-      const jsonStart = cleanText.indexOf('{');
-      const jsonEnd = cleanText.lastIndexOf('}');
-
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
-      }
-      
-      parsed = JSON.parse(cleanText);
-    } catch (e) {
-      logger.error?.('[LLM] Failed to parse response:', e.message);
-      parsed = { clothing_suggestion: null, daily_summary: null };
-    }
-
-    // Attach cost and prompt metadata to the parsed result 
-    // for easier debugging and cost tracking
-    return {
-      ...parsed,
-      _meta: {
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        cost_usd: costUsd,
-        prompt: `SYSTEM:\n${systemPrompt}\n\nUSER:\n${userMessage}`,
-      }
-    };
   }
 
   mapToDashboard(apiData, config) {
