@@ -2,7 +2,7 @@
  * Weather utility functions shared across weather services
  */
 
-import type { CurrentWeather, ForecastDay, HourlyForecast, UnitSystem, Units } from './types.js';
+import type { CurrentWeather, ForecastDay, HourlyForecast, Units } from './types.js';
 
 interface IconAndDescription {
   icon: string;
@@ -11,24 +11,16 @@ interface IconAndDescription {
 
 interface WeatherDataForStatic {
   current?: Partial<CurrentWeather> & {
-    temp_f?: number;
-    temp_c?: number;
     temp?: number;
     description?: string;
   };
   forecast?: Array<Partial<ForecastDay> & {
     high?: number;
-    high_f?: number;
-    high_c?: number;
     low?: number;
-    low_f?: number;
-    low_c?: number;
     rain_chance?: number;
   }>;
   hourlyForecast?: Array<Partial<HourlyForecast> & {
     temp?: number;
-    temp_f?: number;
-    temp_c?: number;
     rain_chance?: number;
   }>;
   units?: Units;
@@ -184,29 +176,17 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
   const hour = new Date().getHours();
   const timeContext = getTimeContext(hour);
 
-  const unitSystem = (weatherData.units && weatherData.units.system === 'metric') ? 'metric' : 'us';
-  const thresholds = deriveThresholds(unitSystem);
+  const thresholds = deriveThresholds();
 
   const current = weatherData.current || {};
   const hourlyForecast = weatherData.hourlyForecast || [];
 
-  const selectTemp = (valueF?: number | null, valueC?: number | null): number => {
-    if (unitSystem === 'metric') {
-      if (valueC != null && valueC !== undefined) return Number(valueC);
-      if (valueF != null && valueF !== undefined) return convertFtoC(valueF);
-    } else {
-      if (valueF != null && valueF !== undefined) return Number(valueF);
-      if (valueC != null && valueC !== undefined) return convertCtoF(valueC);
-    }
-    return unitSystem === 'metric' ? 20 : 68;
-  };
-
   const todayForecast = weatherData.forecast?.[0] || {};
   const tomorrowForecast = weatherData.forecast?.[1] || {};
 
-  const currentTemp = selectTemp(current.temp_f, current.temp_c ?? current.temp);
-  const highTemp = selectTemp(todayForecast.high_f ?? todayForecast.high, todayForecast.high_c ?? todayForecast.high);
-  const lowTemp = selectTemp(todayForecast.low_f ?? todayForecast.low, todayForecast.low_c ?? todayForecast.low);
+  const currentTemp = current.temp ?? 20;
+  const highTemp = todayForecast.high ?? 20;
+  const lowTemp = todayForecast.low ?? 15;
   const condition = (current.description || 'Clear').toLowerCase();
 
   const maxRainChance = Math.max(
@@ -217,7 +197,7 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
 
   const hourlyTemps = hourlyForecast
     .slice(0, 8)
-    .map(h => selectTemp(h.temp_f ?? h.temp, h.temp_c ?? h.temp));
+    .map(h => h.temp ?? 20);
   const tempRange = hourlyTemps.length > 0
     ? Math.max(...hourlyTemps) - Math.min(...hourlyTemps)
     : highTemp - lowTemp;
@@ -256,8 +236,8 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
       thresholds,
     }));
   } else {
-    const tomorrowHigh = selectTemp(tomorrowForecast.high_f ?? tomorrowForecast.high, tomorrowForecast.high_c ?? tomorrowForecast.high);
-    const tomorrowLow = selectTemp(tomorrowForecast.low_f ?? tomorrowForecast.low, tomorrowForecast.low_c ?? tomorrowForecast.low);
+    const tomorrowHigh = tomorrowForecast.high ?? 20;
+    const tomorrowLow = tomorrowForecast.low ?? 15;
     ({ summary, clothing } = buildNightSummary({
       tomorrowHigh,
       tomorrowLow,
@@ -437,35 +417,20 @@ function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thre
   return { summary, clothing };
 }
 
-function deriveThresholds(unitSystem: UnitSystem): Thresholds {
-  const toUnit = (value: number, isDelta: boolean = false): number => {
-    if (unitSystem === 'metric') {
-      return isDelta ? value * 5 / 9 : convertFtoC(value);
-    }
-    return value;
-  };
-
+function deriveThresholds(): Thresholds {
   return {
-    coldMorning: toUnit(50),
-    warmMorning: toUnit(70),
-    warmAfternoon: toUnit(70),
-    hotAfternoon: toUnit(85),
-    coolAfternoon: toUnit(60),
-    coolEvening: toUnit(60),
-    coldNight: toUnit(50),
-    warmNight: toUnit(70),
-    hotNight: toUnit(85),
-    bigSwing: toUnit(15, true),
-    largeWarmup: toUnit(12, true),
-    largeDrop: toUnit(10, true),
+    coldMorning: 10,
+    warmMorning: 21,
+    warmAfternoon: 21,
+    hotAfternoon: 29,
+    coolAfternoon: 15,
+    coolEvening: 15, 
+    coldNight: 10,
+    warmNight: 21,
+    hotNight: 29,
+    bigSwing: 8,
+    largeWarmup: 7,
+    largeDrop: 6,
     rainChance: 40,
   };
-}
-
-function convertFtoC(value: number): number {
-  return (Number(value) - 32) * 5 / 9;
-}
-
-function convertCtoF(value: number): number {
-  return (Number(value) * 9) / 5 + 32;
 }

@@ -16,10 +16,9 @@ interface LLMServiceConfig {
 }
 
 interface CurrentWeatherForLLM {
-  temp_f: number;
-  temp_c?: number;
+  temp: number;
   description?: string;
-  feels_like_f?: number;
+  feels_like?: number;
   humidity?: number;
 }
 
@@ -227,7 +226,7 @@ Remember:
 
     const userMessage = `Today is ${month} ${day}. It is ${timeContext.period.toUpperCase()}, ${time}. Planning for ${timeContext.planningFocus}
 
-CURRENT WEATHER: ${current?.temp_f}°F, ${current?.description}
+CURRENT WEATHER: ${current?.temp}°C, ${current?.description}
 ${weatherContext.dailyInfo}
 
 HOURLY FORECAST:
@@ -257,20 +256,20 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
 
     // Hourly data
     context.hourlyData = relevantHourly
-      .map(h => `${h.time}: ${h.temp_f}° ${h.condition.trim()}${h.rain_chance > 0 ? ` (${h.rain_chance}%)` : ''}`)
+      .map(h => `${h.time}: ${h.temp}° ${h.condition.trim()}${h.rain_chance > 0 ? ` (${h.rain_chance}%)` : ''}`)
       .join('\n');
 
     // Temperature swing
-    const temps = relevantHourly.map(h => h.temp_f);
+    const temps = relevantHourly.map(h => h.temp ?? 20);
     const tempRange = temps.length > 0 ? Math.max(...temps) - Math.min(...temps) : 0;
-    if (tempRange >= 15) {
-      context.contextNotes.push(`${tempRange}° temperature swing`);
+    if (tempRange >= 8) {  // ~15°F in Celsius
+      context.contextNotes.push(`${Math.round(tempRange)}° temperature swing`);
     }
 
     // Wind
-    const maxWind = Math.max(...relevantHourly.map(h => h.wind_mph || 0));
-    if (maxWind >= 12) {
-      context.contextNotes.push(`Windy, gusts ${maxWind} mph`);
+    const maxWind = Math.max(...relevantHourly.map(h => h.wind_speed || 0));
+    if (maxWind >= 20) {  // ~12 mph in km/h
+      context.contextNotes.push(`Windy, gusts ${Math.round(maxWind)} km/h`);
     }
 
     // Humidity extremes
@@ -326,15 +325,15 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
     }
 
     // Heat advisory
-    const hotHours = relevantHourly.filter(h => h.temp_f >= 90);
+    const hotHours = relevantHourly.filter(h => (h.temp ?? 0) >= 32);  // ~90°F
     if (hotHours.length >= 2) {
       context.contextNotes.push(`Heat peak ${hotHours[0].time}-${hotHours[hotHours.length - 1].time}`);
     }
 
     // Feels-like delta - when significantly different
-    if (current?.feels_like_f && current?.temp_f && Math.abs(current.temp_f - current.feels_like_f) >= 5) {
-      const delta = current.feels_like_f - current.temp_f;
-      context.contextNotes.push(`Feels ${delta > 0 ? 'warmer' : 'cooler'} (${Math.abs(delta)}° diff)`);
+    if (current?.feels_like && current?.temp && Math.abs(current.temp - current.feels_like) >= 3) {  // ~5°F
+      const delta = current.feels_like - current.temp;
+      context.contextNotes.push(`Feels ${delta > 0 ? 'warmer' : 'cooler'} (${Math.abs(Math.round(delta))}° diff)`);
     }
 
     // Limit to top 5 and join

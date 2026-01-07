@@ -6,18 +6,11 @@
 // Unit System Types
 // ----------------------------------------------------------------------------
 
-export type UnitSystem = 'us' | 'metric';
-
 export interface Units {
-  system: UnitSystem;
   temperature: string;
-  temperature_secondary: string;
   wind_speed: string;
-  wind_speed_secondary: string;
   precipitation: string;
-  precipitation_secondary: string;
   pressure: string;
-  pressure_secondary: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -46,26 +39,14 @@ export interface WeatherLocation {
   country: string;
   query: string;
   current_temp: number;
-  current_temp_f: number;
-  current_temp_c: number;
   feels_like: number;
-  feels_like_f: number;
-  feels_like_c: number;
   high: number;
-  high_f: number;
-  high_c: number;
   low: number;
-  low_f: number;
-  low_c: number;
   icon: string;
   condition: string;
   rain_chance: number;
   humidity: number;
   pressure: number;
-  pressure_in: number;
-  pressure_hpa: number;
-  wind_mph: number;
-  wind_kmh: number;
   wind_speed: number;
   wind_dir: number;
   forecast?: ForecastDay[];
@@ -75,11 +56,7 @@ export interface ForecastDay {
   date: string;
   day: string;
   high: number;
-  high_f: number;
-  high_c: number;
   low: number;
-  low_f: number;
-  low_c: number;
   icon: string;
   rain_chance: number;
 }
@@ -87,20 +64,14 @@ export interface ForecastDay {
 export interface HourlyForecast {
   time: string;
   temp: number | null;
-  temp_f: number;
-  temp_c: number;
   condition: string;
   icon: string;
   rain_chance: number;
   wind_speed: number | null;
-  wind_mph: number;
-  wind_kmh: number;
 }
 
 export interface WindData {
   speed: number | null;
-  speed_mph: number | null;
-  speed_kmh: number | null;
   direction: string;
 }
 
@@ -122,17 +93,9 @@ export interface AirQualityData {
 
 export interface PrecipitationData {
   last_24h: number | null;
-  last_24h_in: number | null;
-  last_24h_mm: number | null;
   week_total: number | null;
-  week_total_in: number | null;
-  week_total_mm: number | null;
   month_total: number | null;
-  month_total_in: number | null;
-  month_total_mm: number | null;
   year_total: number | null;
-  year_total_in: number | null;
-  year_total_mm: number | null;
   units: string;
 }
 
@@ -151,11 +114,7 @@ export interface CalendarEvent {
 
 export interface DashboardData {
   current_temp: number;
-  current_temp_f: number;
-  current_temp_c: number;
   feels_like: number;
-  feels_like_f: number;
-  feels_like_c: number;
   weather_icon: string;
   weather_description: string;
   date: string;
@@ -168,8 +127,6 @@ export interface DashboardData {
   moon: MoonData;
   humidity: number;
   pressure: number | null;
-  pressure_in: number | null;
-  pressure_hpa: number | null;
   air_quality: AirQualityData;
   precipitation: PrecipitationData;
   calendar_events: CalendarEvent[];
@@ -231,17 +188,11 @@ export interface Logger {
 
 export interface CurrentWeather {
   temp: number;
-  temp_f: number;
-  temp_c: number;
   feels_like: number;
-  feels_like_f: number;
-  feels_like_c: number;
   weather_icon: string;
   description: string;
   humidity: number;
   pressure: number | null;
-  pressure_in: number | null;
-  pressure_hpa: number | null;
   wind: WindData;
 }
 
@@ -260,17 +211,9 @@ export interface LLMInsights {
 
 export interface AmbientPrecipitationData {
   last_24h?: number | null;
-  last_24h_in?: number | null;
-  last_24h_mm?: number | null;
   week_total?: number | null;
-  week_total_in?: number | null;
-  week_total_mm?: number | null;
   month_total?: number | null;
-  month_total_in?: number | null;
-  month_total_mm?: number | null;
   year_total?: number | null;
-  year_total_in?: number | null;
-  year_total_mm?: number | null;
 }
 
 // ----------------------------------------------------------------------------

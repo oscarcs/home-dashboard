@@ -104,32 +104,6 @@ button:disabled {
   margin-bottom: 16px;
 }
 
-/* Vehicle Items */
-.vehicle-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.vehicle-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.vehicle-name {
-  font-weight: 500;
-}
-
-.vehicle-details {
-  color: #6b7280;
-  font-size: 14px;
-}
-
 /* Calendar Items */
 .calendar-item {
   display: flex;

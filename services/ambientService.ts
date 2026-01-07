@@ -40,20 +40,11 @@ interface AmbientWeatherApiData {
 // ============================================================================
 
 interface AmbientWindData {
-  speed_mph: number;
-  speed_kmh: number;
+  speed: number;
   direction: string;
 }
 
 interface AmbientPrecipitationData {
-  last_24h_in: number;
-  last_24h_mm: number;
-  week_total_in: number;
-  week_total_mm: number;
-  month_total_in: number;
-  month_total_mm: number;
-  year_total_in: number;
-  year_total_mm: number;
   last_24h: number;
   week_total: number;
   month_total: number;
@@ -62,16 +53,10 @@ interface AmbientPrecipitationData {
 }
 
 interface AmbientDashboardData {
-  current_temp_f: number;
-  current_temp_c: number;
   current_temp: number;
-  feels_like_f: number;
-  feels_like_c: number;
   feels_like: number;
   humidity: number;
-  pressure_in: number;
   pressure: number;
-  pressure_hpa: number;
   wind: AmbientWindData;
   precipitation: AmbientPrecipitationData;
   solar_radiation: number;
@@ -218,35 +203,20 @@ class AmbientService extends BaseService<AmbientDashboardData, AmbientServiceCon
     const windDirection = getWindDirection(windDir);
 
     return {
-      current_temp_f: Math.round(tempF * 10) / 10,
-      current_temp_c: Math.round(tempC * 10) / 10,
-      current_temp: Math.round(tempF * 10) / 10,
-      feels_like_f: Math.round(feelsLikeF * 10) / 10,
-      feels_like_c: Math.round(feelsLikeC * 10) / 10,
-      feels_like: Math.round(feelsLikeF * 10) / 10,
+      current_temp: Math.round(tempC * 10) / 10,
+      feels_like: Math.round(feelsLikeC * 10) / 10,
       humidity: Math.round(humidity),
-      pressure_in: Math.round(pressureInHg * 100) / 100,
-      pressure: Math.round(pressureInHg * 100) / 100,
-      pressure_hpa: Math.round(pressureHpa),
+      pressure: Math.round(pressureHpa),
       wind: {
-        speed_mph: Math.round(windSpeedMph * 10) / 10,
-        speed_kmh: Math.round(windSpeedKmh * 10) / 10,
+        speed: Math.round(windSpeedKmh * 10) / 10,
         direction: windDirection,
       },
       precipitation: {
-        last_24h_in: Math.round(Number(apiData.dailyrainin || 0) * 100) / 100,
-        last_24h_mm: Math.round(Number(apiData.dailyrainin || 0) * 2540) / 100,
-        week_total_in: Math.round(Number(apiData.weeklyrainin || 0) * 100) / 100,
-        week_total_mm: Math.round(Number(apiData.weeklyrainin || 0) * 2540) / 100,
-        month_total_in: Math.round(Number(apiData.monthlyrainin || 0) * 100) / 100,
-        month_total_mm: Math.round(Number(apiData.monthlyrainin || 0) * 2540) / 100,
-        year_total_in: Math.round(Number(apiData.yearlyrainin || 0) * 100) / 100,
-        year_total_mm: Math.round(Number(apiData.yearlyrainin || 0) * 2540) / 100,
-        last_24h: Math.round(Number(apiData.dailyrainin || 0) * 100) / 100,
-        week_total: Math.round(Number(apiData.weeklyrainin || 0) * 100) / 100,
-        month_total: Math.round(Number(apiData.monthlyrainin || 0) * 100) / 100,
-        year_total: Math.round(Number(apiData.yearlyrainin || 0) * 100) / 100,
-        units: 'in',
+        last_24h: Math.round(Number(apiData.dailyrainin || 0) * 2540) / 100,
+        week_total: Math.round(Number(apiData.weeklyrainin || 0) * 2540) / 100,
+        month_total: Math.round(Number(apiData.monthlyrainin || 0) * 2540) / 100,
+        year_total: Math.round(Number(apiData.yearlyrainin || 0) * 2540) / 100,
+        units: 'mm',
       },
       solar_radiation: solarRadiation,
     };

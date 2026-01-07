@@ -11,7 +11,6 @@ import type {
   AirQualityData,
   PrecipitationData,
   Units,
-  UnitSystem,
 } from '../lib/types.js';
 
 // ============================================================================
@@ -164,8 +163,6 @@ interface WeatherDashboardData {
 // ============================================================================
 
 export class WeatherService extends BaseService<WeatherDashboardData, WeatherServiceConfig> {
-  private unitSystem: UnitSystem;
-
   constructor(cacheTTLMinutes: number = 30) {
     super({
       name: 'Google Weather',
@@ -174,25 +171,16 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       retryAttempts: 3,
       retryCooldown: 1000,
     });
-    this.unitSystem = this.getUnitSystem();
   }
 
   getCacheSignature(): string {
     const locations = this.getConfiguredLocations();
-    const unitSystem = this.getUnitSystem();
-    // Keep instance unit system in sync with current configuration
-    this.unitSystem = unitSystem;
-    return JSON.stringify({ unitSystem, locations });
+    return JSON.stringify({ locations });
   }
 
   isEnabled(): boolean {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     return !!apiKey;
-  }
-
-  getUnitSystem(): UnitSystem {
-    const system = (process.env.WEATHER_UNIT_SYSTEM || '').trim().toLowerCase();
-    return system === 'metric' ? 'metric' : 'us';
   }
 
   getConfiguredLocations(): string[] {
@@ -214,11 +202,6 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
     locations.push(...parsedAdditional);
 
     return Array.from(new Set(locations));
-  }
-
-  // Helper to convert hPa to inHg
-  private hPaToInHg(hPa: number): number {
-    return hPa * 0.02953;
   }
 
   async geocodeLocation(apiKey: string, metadata: string): Promise<{ lat: number, lng: number, formattedAddress: string } | null> {
@@ -304,25 +287,23 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
     };
 
-    const normalizeTemp = (val: number, unit: string): { f: number, c: number } => {
+    const normalizeTemp = (val: number, unit: string): number => {
       if (unit === 'FAHRENHEIT') {
         const f = val;
         const c = (f - 32) * 5 / 9;
-        return { f, c };
+        return c;
       } else {
         // Assume CELSIUS
-        const c = val;
-        const f = (c * 9 / 5) + 32;
-        return { c, f };
+        return val;
       }
     };
 
-    const normalizeSpeed = (val: number, unit: string): { mph: number, kmh: number } => {
+    const normalizeSpeed = (val: number, unit: string): number => {
       if (unit === 'MILES_PER_HOUR') {
-        return { mph: val, kmh: val * 1.60934 };
+        return val * 1.60934; // Convert to km/h
       } else {
         // Assume KILOMETERS_PER_HOUR
-        return { kmh: val, mph: val * 0.621371 };
+        return val;
       }
     };
 
@@ -345,12 +326,11 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       // Wind
       const windSpeedVal = current.wind?.speed?.value || 0;
       const windUnit = current.wind?.speed?.unit || 'KILOMETERS_PER_HOUR';
-      const windNorm = normalizeSpeed(windSpeedVal, windUnit);
+      const windSpeed = normalizeSpeed(windSpeedVal, windUnit);
 
       // Pressure
       const pressureVal = current.airPressure?.value || 1013; // hPa
-      const pressureHpa = pressureVal;
-      const pressureIn = this.hPaToInHg(pressureVal);
+      const pressure = pressureVal;
 
       // Condition mapping
       const conditionType = String(current.weatherCondition?.description || current.weatherCondition?.type || 'unknown');
@@ -372,39 +352,25 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         return {
           date: dateStr,
           day: getDayOfWeek(dateStr),
-          high: this.unitSystem === 'metric' ? high.c : high.f, // Use configured unit for display
-          high_f: high.f,
-          high_c: high.c,
-          low: this.unitSystem === 'metric' ? low.c : low.f,
-          low_f: low.f,
-          low_c: low.c,
-          icon, // mapped icon
+          high,
+          low,
+          icon,
           rain_chance: precipProb
         };
       });
 
       // return WeatherLocation
       return {
-        name: resolvedAddress ? resolvedAddress.split(',')[0] : locData.location, // Simple city name extraction
-        region: resolvedAddress || '', // Full address as region fallback
-        country: '', // Not easily parsed from formatted address without component breakdown
+        name: resolvedAddress ? resolvedAddress.split(',')[0] : locData.location,
+        region: resolvedAddress || '',
+        country: '',
         query: locData.location,
         
-        current_temp: this.unitSystem === 'metric' ? curTemp.c : curTemp.f,
-        current_temp_f: curTemp.f,
-        current_temp_c: curTemp.c,
-        
-        feels_like: this.unitSystem === 'metric' ? curFeels.c : curFeels.f,
-        feels_like_f: curFeels.f,
-        feels_like_c: curFeels.c,
+        current_temp: curTemp,
+        feels_like: curFeels,
         
         high: forecastDays[0]?.high || 0,
-        high_f: forecastDays[0]?.high_f || 0,
-        high_c: forecastDays[0]?.high_c || 0,
-        
         low: forecastDays[0]?.low || 0,
-        low_f: forecastDays[0]?.low_f || 0,
-        low_c: forecastDays[0]?.low_c || 0,
 
         icon: conditionIcon,
         condition: conditionDesc || conditionType,
@@ -412,13 +378,8 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         rain_chance: current.precipitation?.probability?.percent || 0,
         humidity: current.relativeHumidity || 0,
         
-        pressure: this.unitSystem === 'metric' ? pressureHpa : pressureIn,
-        pressure_in: pressureIn,
-        pressure_hpa: pressureHpa,
-        
-        wind_mph: windNorm.mph,
-        wind_kmh: windNorm.kmh,
-        wind_speed: this.unitSystem === 'metric' ? windNorm.kmh : windNorm.mph,
+        pressure,
+        wind_speed: windSpeed,
         wind_dir: current.wind?.direction?.degrees || 0,
         
         forecast: forecastDays
@@ -436,21 +397,17 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         const { icon } = mapIconAndDescription(h.weatherCondition?.description || h.weatherCondition?.type);
         const wSpeed = h.wind?.speed?.value || 0;
         const wUnit = h.wind?.speed?.unit || 'KILOMETERS_PER_HOUR';
-        const wNorm = normalizeSpeed(wSpeed, wUnit);
+        const windSpeed = normalizeSpeed(wSpeed, wUnit);
 
         const isoTime = h.forecastTime; 
         
         return {
             time: isoTime,
-            temp: this.unitSystem === 'metric' ? t.c : t.f,
-            temp_f: t.f,
-            temp_c: t.c,
+            temp: t,
             condition: h.weatherCondition?.description || h.weatherCondition?.type || '',
             icon,
             rain_chance: h.precipitation?.probability?.percent || 0,
-            wind_speed: this.unitSystem === 'metric' ? wNorm.kmh : wNorm.mph,
-            wind_mph: wNorm.mph,
-            wind_kmh: wNorm.kmh
+            wind_speed: windSpeed,
         };
     });
 
@@ -481,29 +438,16 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         },
         precipitation: {
             last_24h: 0,
-            last_24h_in: 0,
-            last_24h_mm: 0,
             week_total: null,
-            week_total_in: null,
-            week_total_mm: null,
             month_total: null,
-            month_total_in: null,
-            month_total_mm: null,
             year_total: null,
-            year_total_in: null,
-            year_total_mm: null,
-            units: this.unitSystem === 'metric' ? 'mm' : 'in'
+            units: 'mm'
         },
         units: {
-            system: this.unitSystem,
-            temperature: this.unitSystem === 'metric' ? '°C' : '°F',
-            temperature_secondary: this.unitSystem === 'metric' ? '°F' : '°C',
-            wind_speed: this.unitSystem === 'metric' ? 'km/h' : 'mph',
-            wind_speed_secondary: this.unitSystem === 'metric' ? 'mph' : 'km/h',
-            precipitation: this.unitSystem === 'metric' ? 'mm' : 'in',
-            precipitation_secondary: this.unitSystem === 'metric' ? 'in' : 'mm',
-            pressure: this.unitSystem === 'metric' ? 'hPa' : 'inHg',
-            pressure_secondary: this.unitSystem === 'metric' ? 'inHg' : 'hPa'
+            temperature: '°C',
+            wind_speed: 'km/h',
+            precipitation: 'mm',
+            pressure: 'hPa'
         }
     };
   }

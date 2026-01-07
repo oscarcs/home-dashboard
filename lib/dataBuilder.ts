@@ -18,25 +18,17 @@ import type {
   AmbientPrecipitationData,
   CalendarEvent,
   ServiceStatus,
-  UnitSystem,
   Units,
   LLMInsights,
 } from './types.js';
 
 interface AmbientData {
   current_temp?: number | null;
-  current_temp_f?: number | null;
-  current_temp_c?: number | null;
   feels_like?: number | null;
-  feels_like_f?: number | null;
-  feels_like_c?: number | null;
   humidity?: number | null;
   pressure?: number | null;
-  pressure_in?: number | null;
-  pressure_hpa?: number | null;
   wind?: {
-    speed_mph?: number | null;
-    speed_kmh?: number | null;
+    speed?: number | null;
     direction?: string;
   };
   precipitation?: AmbientPrecipitationData;
@@ -102,16 +94,15 @@ export async function buildDashboardData(req: Request, logger: Logger = console)
   // Use ambient sensor data if available, otherwise fall back to Visual Crossing
   // Always use WeatherAPI for condition/icon
   const mainLocation = weatherData.locations[0] || {};
-  const unitSystem = weatherData.units?.system || 'us';
 
   const fallbackWindDirection = (dir: number): string => getWindDirection(dir || 0);
 
   const current = ambientData
-    ? buildCurrentFromAmbient(ambientData, mainLocation, unitSystem, fallbackWindDirection)
-    : buildCurrentFromWeather(mainLocation, unitSystem, fallbackWindDirection);
+    ? buildCurrentFromAmbient(ambientData, mainLocation, fallbackWindDirection)
+    : buildCurrentFromWeather(mainLocation, fallbackWindDirection);
 
   // Use Ambient precipitation if available, otherwise WeatherAPI
-  const precipitation = normalizePrecipitationData(ambientData?.precipitation, weatherData.precipitation, unitSystem);
+  const precipitation = normalizePrecipitationData(ambientData?.precipitation, weatherData.precipitation);
 
   // Fetch calendar (OPTIONAL)
   let calendar_events: CalendarEvent[] = [];
@@ -133,17 +124,13 @@ export async function buildDashboardData(req: Request, logger: Logger = console)
 
   // Compute temperature comparison (today's high vs yesterday's high)
   const todayForecast = weatherData.locations[0]?.forecast?.[0];
-  const todayHigh = unitSystem === 'metric' ? todayForecast?.high_c : todayForecast?.high_f;
-  const tempComparison = computeTempComparison(todayHigh, unitSystem);
+  const todayHigh = todayForecast?.high;
+  const tempComparison = computeTempComparison(todayHigh);
 
   // Build base data model
   const data: DashboardData = {
     current_temp: current.temp,
-    current_temp_f: current.temp_f,
-    current_temp_c: current.temp_c,
     feels_like: current.feels_like,
-    feels_like_f: current.feels_like_f,
-    feels_like_c: current.feels_like_c,
     weather_icon: current.weather_icon,
     weather_description: current.description,
     date: formatTime(now),
@@ -156,8 +143,6 @@ export async function buildDashboardData(req: Request, logger: Logger = console)
     moon: weatherData.moon,
     humidity: current.humidity,
     pressure: current.pressure,
-    pressure_in: current.pressure_in,
-    pressure_hpa: current.pressure_hpa,
     air_quality: weatherData.air_quality,
     precipitation,
     calendar_events,
@@ -307,11 +292,10 @@ export function getServiceStatuses(): Record<string, ServiceStatus> {
 /**
  * Compare today's high with yesterday's high
  * Stores daily highs for the last 3 days for historical comparison
- * @param todayHigh - Today's forecast high temperature
- * @param unitSystem - Unit system (us or metric)
+ * @param todayHigh - Today's forecast high temperature (Celsius)
  * @returns Comparison string or null if no yesterday data
  */
-function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSystem = 'us'): string | null {
+function computeTempComparison(todayHigh: number | undefined): string | null {
   if (todayHigh == null) return null;
 
   // Use local dates, not UTC (important for timezone-aware comparison)
@@ -323,10 +307,8 @@ function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSy
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-  // Get daily highs history keyed by unit system
-  const storedHighs = getStateKey<Record<string, Record<string, number>>>('daily_highs', {});
-  const unitKey = unitSystem === 'metric' ? 'metric' : 'us';
-  const dailyHighs = storedHighs[unitKey] || {};
+  // Get daily highs history
+  const dailyHighs = getStateKey<Record<string, number>>('daily_highs', {});
 
   // Store today's high if not already stored for today
   if (!dailyHighs[todayStr]) {
@@ -340,8 +322,7 @@ function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSy
       trimmedHighs[date] = dailyHighs[date];
     });
 
-    const nextState = { ...storedHighs, [unitKey]: trimmedHighs };
-    setStateKey('daily_highs', nextState);
+    setStateKey('daily_highs', trimmedHighs);
     return null; // Need a previous value to compare; return on first store
   }
 
@@ -351,9 +332,9 @@ function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSy
 
   const diff = Number(todayHigh) - Number(yesterdayHigh);
 
-  // Determine comparison based on temperature difference
-  const threshold = unitSystem === 'metric' ? 0.5 : 1;
-  const strongThreshold = unitSystem === 'metric' ? 5.5 : 10; // ~10°F ≈ 5.5°C
+  // Determine comparison based on temperature difference (Celsius)
+  const threshold = 0.5;
+  const strongThreshold = 5.5; // ~10°F in Celsius
   if (Math.abs(diff) < threshold) {
     return 'Same as yesterday';
   } else if (diff >= strongThreshold) {
@@ -370,43 +351,23 @@ function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSy
 function buildCurrentFromAmbient(
   ambient: AmbientData,
   mainLocation: WeatherLocation,
-  unitSystem: UnitSystem,
   windDirectionFallback: (dir: number) => string
 ): CurrentWeather {
-  const temp = unitSystem === 'metric' ? ambient.current_temp_c : ambient.current_temp_f;
-  const tempF = ambient.current_temp_f ?? ambient.current_temp ?? null;
-  const tempC = ambient.current_temp_c ?? (tempF != null ? convertFtoC(tempF) : null);
-
-  const feels = unitSystem === 'metric' ? ambient.feels_like_c : ambient.feels_like_f;
-  const feelsF = ambient.feels_like_f ?? ambient.feels_like ?? null;
-  const feelsC = ambient.feels_like_c ?? (feelsF != null ? convertFtoC(feelsF) : null);
-
-  const pressureIn = ambient.pressure_in ?? ambient.pressure ?? null;
-  const pressureHpa = ambient.pressure_hpa ?? (pressureIn != null ? convertInHgToHpa(pressureIn) : null);
-  const pressure = unitSystem === 'metric' ? pressureHpa : pressureIn;
-
-  const windSpeedMph = ambient.wind?.speed_mph ?? null;
-  const windSpeedKmh = ambient.wind?.speed_kmh ?? (windSpeedMph != null ? windSpeedMph * 1.60934 : null);
-  const windSpeed = unitSystem === 'metric' ? windSpeedKmh : windSpeedMph;
+  const temp = ambient.current_temp ?? 0;
+  const feels = ambient.feels_like ?? temp;
+  const pressure = ambient.pressure ?? null;
+  const windSpeed = ambient.wind?.speed ?? null;
   const windDirection = ambient.wind?.direction || windDirectionFallback(mainLocation.wind_dir);
 
   return {
-    temp: roundValue(temp ?? 0),
-    temp_f: roundValue(tempF ?? 0),
-    temp_c: roundValue(tempC ?? 0),
-    feels_like: roundValue(feels ?? 0),
-    feels_like_f: roundValue(feelsF ?? 0),
-    feels_like_c: roundValue(feelsC ?? 0),
+    temp: roundValue(temp),
+    feels_like: roundValue(feels),
     humidity: ambient.humidity ?? mainLocation.humidity ?? 0,
-    pressure: pressure != null ? roundValue(pressure, unitSystem === 'metric' ? 0 : 2) : null,
-    pressure_in: pressureIn != null ? roundValue(pressureIn, 2) : null,
-    pressure_hpa: pressureHpa != null ? Math.round(pressureHpa) : null,
+    pressure: pressure != null ? roundValue(pressure, 0) : null,
     weather_icon: mainLocation.icon || 'sunny',
     description: mainLocation.condition || 'Clear',
     wind: {
       speed: windSpeed != null ? roundValue(windSpeed, 1) : null,
-      speed_mph: windSpeedMph != null ? roundValue(windSpeedMph, 1) : null,
-      speed_kmh: windSpeedKmh != null ? roundValue(windSpeedKmh, 1) : null,
       direction: windDirection,
     },
   };
@@ -414,37 +375,22 @@ function buildCurrentFromAmbient(
 
 function buildCurrentFromWeather(
   location: WeatherLocation,
-  unitSystem: UnitSystem,
   windDirectionFallback: (dir: number) => string
 ): CurrentWeather {
-  const temp = unitSystem === 'metric' ? location.current_temp_c : location.current_temp_f;
-  const feels = unitSystem === 'metric'
-    ? (location.feels_like_c != null ? location.feels_like_c : location.current_temp_c)
-    : (location.feels_like_f != null ? location.feels_like_f : location.current_temp_f);
-  const windSpeedMph = location.wind_mph ?? null;
-  const windSpeedKmh = location.wind_kmh ?? (windSpeedMph != null ? windSpeedMph * 1.60934 : null);
-  const windSpeed = unitSystem === 'metric' ? windSpeedKmh : windSpeedMph;
-  const pressureIn = location.pressure_in ?? null;
-  const pressureHpa = location.pressure_hpa ?? (pressureIn != null ? convertInHgToHpa(pressureIn) : null);
-  const pressure = unitSystem === 'metric' ? pressureHpa : pressureIn;
+  const temp = location.current_temp;
+  const feels = location.feels_like ?? location.current_temp;
+  const windSpeed = location.wind_speed ?? null;
+  const pressure = location.pressure ?? null;
 
   return {
     temp: roundValue(temp),
-    temp_f: location.current_temp_f != null ? roundValue(location.current_temp_f) : 0,
-    temp_c: location.current_temp_c != null ? roundValue(location.current_temp_c) : 0,
     feels_like: roundValue(feels),
-    feels_like_f: location.feels_like_f != null ? roundValue(location.feels_like_f) : (location.current_temp_f != null ? roundValue(location.current_temp_f) : 0),
-    feels_like_c: location.feels_like_c != null ? roundValue(location.feels_like_c) : (location.current_temp_c != null ? roundValue(location.current_temp_c) : 0),
     humidity: location.humidity || 0,
-    pressure: pressure != null ? roundValue(pressure, unitSystem === 'metric' ? 0 : 2) : null,
-    pressure_in: pressureIn != null ? roundValue(pressureIn, 2) : null,
-    pressure_hpa: pressureHpa != null ? Math.round(pressureHpa) : null,
+    pressure: pressure != null ? roundValue(pressure, 0) : null,
     weather_icon: location.icon || 'sunny',
     description: location.condition || 'Clear',
     wind: {
       speed: windSpeed != null ? roundValue(windSpeed, 1) : null,
-      speed_mph: windSpeedMph != null ? roundValue(windSpeedMph, 1) : null,
-      speed_kmh: windSpeedKmh != null ? roundValue(windSpeedKmh, 1) : null,
       direction: windDirectionFallback(location.wind_dir),
     },
   };
@@ -452,56 +398,18 @@ function buildCurrentFromWeather(
 
 function normalizePrecipitationData(
   ambientPrecip: AmbientPrecipitationData | undefined,
-  weatherPrecip: PrecipitationData | undefined,
-  unitSystem: UnitSystem
+  weatherPrecip: PrecipitationData | undefined
 ): PrecipitationData {
   const source = ambientPrecip || weatherPrecip || {};
-  const units = unitSystem === 'metric' ? 'mm' : 'in';
-
-  const last24In = resolvePrecipValue(source.last_24h_in, source.last_24h_mm, source.last_24h, 'in');
-  const last24Mm = resolvePrecipValue(source.last_24h_mm, source.last_24h_in, source.last_24h, 'mm');
-
-  const weekIn = resolvePrecipValue(source.week_total_in, source.week_total_mm, source.week_total, 'in');
-  const weekMm = resolvePrecipValue(source.week_total_mm, source.week_total_in, source.week_total, 'mm');
-
-  const monthIn = resolvePrecipValue(source.month_total_in, source.month_total_mm, source.month_total, 'in');
-  const monthMm = resolvePrecipValue(source.month_total_mm, source.month_total_in, source.month_total, 'mm');
-
-  const yearIn = resolvePrecipValue(source.year_total_in, source.year_total_mm, source.year_total, 'in');
-  const yearMm = resolvePrecipValue(source.year_total_mm, source.year_total_in, source.year_total, 'mm');
 
   const formatValue = (value: number | null): number | null => (value == null ? null : Number(value.toFixed(2)));
 
-  const last24Display = formatValue(units === 'mm' ? last24Mm : last24In);
-  const last24InDisplay = formatValue(last24In);
-  const last24MmDisplay = formatValue(last24Mm);
-
-  const weekDisplay = formatValue(units === 'mm' ? weekMm : weekIn);
-  const weekInDisplay = formatValue(weekIn);
-  const weekMmDisplay = formatValue(weekMm);
-
-  const monthDisplay = formatValue(units === 'mm' ? monthMm : monthIn);
-  const monthInDisplay = formatValue(monthIn);
-  const monthMmDisplay = formatValue(monthMm);
-
-  const yearDisplay = formatValue(units === 'mm' ? yearMm : yearIn);
-  const yearInDisplay = formatValue(yearIn);
-  const yearMmDisplay = formatValue(yearMm);
-
   return {
-    last_24h: last24Display,
-    last_24h_in: last24InDisplay,
-    last_24h_mm: last24MmDisplay,
-    week_total: weekDisplay,
-    week_total_in: weekInDisplay,
-    week_total_mm: weekMmDisplay,
-    month_total: monthDisplay,
-    month_total_in: monthInDisplay,
-    month_total_mm: monthMmDisplay,
-    year_total: yearDisplay,
-    year_total_in: yearInDisplay,
-    year_total_mm: yearMmDisplay,
-    units,
+    last_24h: formatValue(source.last_24h ?? null),
+    week_total: formatValue(source.week_total ?? null),
+    month_total: formatValue(source.month_total ?? null),
+    year_total: formatValue(source.year_total ?? null),
+    units: 'mm',
   };
 }
 
@@ -509,38 +417,4 @@ function roundValue(value: number | null, decimals: number = 0): number {
   if (value == null || !Number.isFinite(Number(value))) return value ?? 0;
   const factor = 10 ** decimals;
   return Math.round(Number(value) * factor) / factor;
-}
-
-function convertFtoC(value: number): number {
-  return (Number(value) - 32) * 5 / 9;
-}
-
-function convertInHgToHpa(value: number): number {
-  return Number(value) * 33.8638866667;
-}
-
-function resolvePrecipValue(
-  primary: number | null | undefined,
-  secondary: number | null | undefined,
-  fallback: number | null | undefined,
-  targetUnit: 'in' | 'mm'
-): number | null {
-  const hasPrimary = primary != null;
-  const hasSecondary = secondary != null;
-  const hasFallback = fallback != null;
-
-  if (!hasPrimary && !hasSecondary && !hasFallback) {
-    return null;
-  }
-
-  if (hasPrimary) return Number(primary);
-  if (hasSecondary) {
-    if (targetUnit === 'in') return Number(secondary) / 25.4;
-    if (targetUnit === 'mm') return Number(secondary) * 25.4;
-  }
-  if (hasFallback) {
-    // Unknown unit; assume inches for backwards compatibility
-    return targetUnit === 'mm' ? Number(fallback) * 25.4 : Number(fallback);
-  }
-  return null;
 }
