@@ -19,14 +19,6 @@
           </div>
           <div id="cal-content"></div>
         </div>
-        
-        <div class="card">
-          <h2>Car charge/fuel level via Smartcar API</h2>
-          <div id="veh-content">
-            <div class="loading">Loading vehicles...</div>
-          </div>
-          <a class="btn-secondary" href="/auth/smartcar">Add Car</a>
-        </div>
       </div>
       
       <div class="admin-sidebar">
@@ -118,43 +110,6 @@
         });
       } catch (e) {
         console.error('Failed to save calendar selection:', e);
-      }
-    }
-
-    async function loadVehicles() {
-      vehContent.innerHTML = '<div class="loading">Loading vehicles...</div>';
-      try {
-        const data = await fetchJSON('/admin/vehicles');
-        if (data.items.length === 0) {
-          vehContent.innerHTML = '<div class="empty">No vehicles connected</div>';
-          return;
-        }
-        vehContent.innerHTML = data.items.map(function(v){
-          const displayName = v.display_name || `${v.make} ${v.model}`;
-          return `
-            <div class="vehicle-item">
-              <div class="vehicle-info">
-                <div>
-                  <div class="vehicle-name">${displayName}</div>
-                  <div class="vehicle-details">${v.make} ${v.model}</div>
-                </div>
-              </div>
-              <button class="btn-danger btn-small" onclick="removeVehicle('${v.id}')">Remove</button>
-            </div>
-          `;
-        }).join('');
-      } catch (e) { 
-        vehContent.innerHTML = '<div class="error">Error loading vehicles: ' + e.message + '</div>';
-      }
-    }
-
-    async function removeVehicle(vehicleId) {
-      if (!confirm('Remove this vehicle from your dashboard?')) return;
-      try {
-        await fetch(`/admin/vehicles/${vehicleId}`, { method: 'DELETE' });
-        loadVehicles();
-      } catch (e) {
-        alert('Failed to remove vehicle: ' + e.message);
       }
     }
 
@@ -278,7 +233,6 @@
     // Auto-load on page load
     document.addEventListener('DOMContentLoaded', function() {
       checkCalendarAuth();
-      loadVehicles();
       loadServices();
       
       // Auto-refresh services status every 30 seconds

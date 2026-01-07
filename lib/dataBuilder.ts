@@ -1,51 +1,100 @@
-const { WeatherService } = require('../services/weatherService');
-const { AmbientService } = require('../services/ambientService');
-const { LLMService } = require('../services/llmService');
-const { VehiclesService } = require('../services/vehicleService');
-const { CalendarService } = require('../services/calendarService');
-const { getStateKey, setStateKey } = require('./state');
-const { buildStaticDescription, getWindDirection } = require('./weatherUtils');
+// @ts-nocheck - Services are not yet converted to TypeScript
+import { WeatherService } from '../services/weatherService.js';
+import { AmbientService } from '../services/ambientService.js';
+import { LLMService } from '../services/llmService.js';
+import { CalendarService } from '../services/calendarService.js';
+import { getStateKey, setStateKey } from './state.js';
+import { buildStaticDescription, getWindDirection } from './weatherUtils.js';
+import type { Request } from 'express';
+import type {
+  DashboardData,
+  Logger,
+  WeatherLocation,
+  ForecastDay,
+  HourlyForecast,
+  CurrentWeather,
+  WindData,
+  PrecipitationData,
+  AmbientPrecipitationData,
+  CalendarEvent,
+  ServiceStatus,
+  UnitSystem,
+  Units,
+  LLMInsights,
+} from './types.js';
+
+interface AmbientData {
+  current_temp?: number | null;
+  current_temp_f?: number | null;
+  current_temp_c?: number | null;
+  feels_like?: number | null;
+  feels_like_f?: number | null;
+  feels_like_c?: number | null;
+  humidity?: number | null;
+  pressure?: number | null;
+  pressure_in?: number | null;
+  pressure_hpa?: number | null;
+  wind?: {
+    speed_mph?: number | null;
+    speed_kmh?: number | null;
+    direction?: string;
+  };
+  precipitation?: AmbientPrecipitationData;
+}
+
+interface WeatherData {
+  locations: WeatherLocation[];
+  forecast: ForecastDay[];
+  hourlyForecast: HourlyForecast[];
+  precipitation?: PrecipitationData;
+  timezone?: string;
+  sun: { sunrise: string; sunset: string };
+  moon: { phase: string; direction: string; illumination: number | null };
+  air_quality: { aqi: number | null; category: string };
+  units: Units;
+}
 
 /**
  * Build complete dashboard data from all available services
  * Services fail gracefully - only WeatherAPI is required
- * 
- * @param {Object} req - Express request object (for baseUrl)
- * @param {Object} logger - Logger instance
- * @returns {Promise<Object>} Complete dashboard data model
+ *
+ * @param req - Express request object (for baseUrl)
+ * @param logger - Logger instance
+ * @returns Complete dashboard data model
  */
-async function buildDashboardData(req, logger = console) {
+export async function buildDashboardData(req: Request, logger: Logger = console): Promise<DashboardData> {
   const now = new Date();
-  const formatTime = (date) => date.toISOString();
+  const formatTime = (date: Date): string => date.toISOString();
 
   // Initialize all services (each service defines its own cache TTL)
   const weatherService = new WeatherService();
   const ambientService = new AmbientService();
   const llmService = new LLMService();
-  const vehiclesService = new VehiclesService();
   const calendarService = new CalendarService();
 
   // Fetch weather data (REQUIRED)
-  let weatherData;
-  let weatherStatus;
+  let weatherData: WeatherData;
+  let weatherStatus: ServiceStatus;
   try {
     const result = await weatherService.getData({}, logger);
     weatherData = result.data;
     weatherStatus = result.status;
   } catch (error) {
-    logger.error?.('[DataBuilder] Weather service failed (REQUIRED):', error.message);
-    throw new Error(`Weather API unavailable: ${error.message}`);
+    const err = error as Error;
+    logger.error?.('[DataBuilder] Weather service failed (REQUIRED):', err.message);
+    throw new Error(`Weather API unavailable: ${err.message}`);
   }
 
   // Fetch ambient data (OPTIONAL - overrides weather current conditions)
-  let ambientData = null;
-  let ambientStatus;
+  let ambientData: AmbientData | null = null;
+  let ambientStatus: ServiceStatus;
   try {
     const result = await ambientService.getData({}, logger);
     ambientData = result.data;
     ambientStatus = result.status;
   } catch (error) {
-    logger.info?.('[DataBuilder] Ambient service unavailable (optional):', error.message);
+    const err = error as Error;
+    logger.info?.('[DataBuilder] Ambient service unavailable (optional):', err.message);
     ambientStatus = ambientService.getStatus();
   }
 
@@ -55,28 +104,18 @@ async function buildDashboardData(req, logger = console) {
   const mainLocation = weatherData.locations[0] || {};
   const unitSystem = weatherData.units?.system || 'us';
 
-  const fallbackWindDirection = (dir) => getWindDirection(dir || 0);
+  const fallbackWindDirection = (dir: number): string => getWindDirection(dir || 0);
 
-  const current = ambientData ? buildCurrentFromAmbient(ambientData, mainLocation, unitSystem, fallbackWindDirection) : buildCurrentFromWeather(mainLocation, unitSystem, fallbackWindDirection);
+  const current = ambientData
+    ? buildCurrentFromAmbient(ambientData, mainLocation, unitSystem, fallbackWindDirection)
+    : buildCurrentFromWeather(mainLocation, unitSystem, fallbackWindDirection);
 
   // Use Ambient precipitation if available, otherwise WeatherAPI
   const precipitation = normalizePrecipitationData(ambientData?.precipitation, weatherData.precipitation, unitSystem);
 
-  // Fetch vehicles (OPTIONAL)
-  let vehicles = [];
-  let vehiclesStatus;
-  try {
-    const result = await vehiclesService.getData({}, logger);
-    vehicles = result.data || [];
-    vehiclesStatus = result.status;
-  } catch (error) {
-    logger.info?.('[DataBuilder] Vehicles service unavailable (optional):', error.message);
-    vehiclesStatus = vehiclesService.getStatus();
-  }
-
   // Fetch calendar (OPTIONAL)
-  let calendar_events = [];
-  let calendarStatus;
+  let calendar_events: CalendarEvent[] = [];
+  let calendarStatus: ServiceStatus;
   try {
     const baseUrl = getBaseUrl(req);
     const calendarConfig = {
@@ -87,7 +126,8 @@ async function buildDashboardData(req, logger = console) {
     calendar_events = result.data || [];
     calendarStatus = result.status;
   } catch (error) {
-    logger.info?.('[DataBuilder] Calendar service unavailable (optional):', error.message);
+    const err = error as Error;
+    logger.info?.('[DataBuilder] Calendar service unavailable (optional):', err.message);
     calendarStatus = calendarService.getStatus();
   }
 
@@ -97,7 +137,7 @@ async function buildDashboardData(req, logger = console) {
   const tempComparison = computeTempComparison(todayHigh, unitSystem);
 
   // Build base data model
-  const data = {
+  const data: DashboardData = {
     current_temp: current.temp,
     current_temp_f: current.temp_f,
     current_temp_c: current.temp_c,
@@ -121,19 +161,20 @@ async function buildDashboardData(req, logger = console) {
     air_quality: weatherData.air_quality,
     precipitation,
     calendar_events,
-    vehicles,
+    clothing_suggestion: '',
+    daily_summary: '',
     last_updated: formatTime(now),
     units: weatherData.units,
   };
 
   // Fetch LLM insights (OPTIONAL - enriches clothing suggestion and adds daily summary)
-  let llmStatus;
+  let llmStatus: ServiceStatus;
   let hasValidInsights = false;
-  
+
   try {
     const llmConfig = {
       input: {
-  current,
+        current,
         forecast: data.forecast,
         hourlyForecast: data.hourlyForecast,
         calendar: data.calendar_events,
@@ -146,7 +187,7 @@ async function buildDashboardData(req, logger = console) {
       },
     };
     const result = await llmService.getData(llmConfig, logger);
-    const insights = result.data;
+    const insights: LLMInsights | null = result.data;
     llmStatus = result.status;
 
     // Check if we got valid insights from LLM
@@ -157,17 +198,18 @@ async function buildDashboardData(req, logger = console) {
       hasValidInsights = true;
     }
   } catch (error) {
-    logger.info?.('[DataBuilder] LLM service error (optional):', error.message);
+    const err = error as Error;
+    logger.info?.('[DataBuilder] LLM service error (optional):', err.message);
     llmStatus = llmService.getStatus();
   }
-  
+
   // If no valid insights (disabled, error, or invalid response), try fallbacks
   if (!hasValidInsights) {
     let usedCache = false;
-    
+
     // Try to use stale cache for LLM
     try {
-      const staleCache = llmService.getCache(true); // true = allow stale
+      const staleCache = llmService.getCache(true) as LLMInsights | null; // true = allow stale
       if (staleCache && staleCache.daily_summary) {
         data.daily_summary = staleCache.daily_summary.trim();
         if (staleCache.clothing_suggestion) {
@@ -178,7 +220,7 @@ async function buildDashboardData(req, logger = console) {
         logger.info?.('[DataBuilder] Using stale LLM cache');
       }
     } catch (_) {}
-    
+
     // If no cache available, use static description fallback
     if (!usedCache) {
       logger.info?.('[DataBuilder] Using static description fallback');
@@ -199,7 +241,6 @@ async function buildDashboardData(req, logger = console) {
     weather: weatherStatus,
     ambient: ambientStatus,
     llm: llmStatus,
-    vehicles: vehiclesStatus,
     calendar: calendarStatus,
   };
 
@@ -208,11 +249,13 @@ async function buildDashboardData(req, logger = console) {
 
 /**
  * Get base URL from request
- * @param {Object} req - Express request object
- * @returns {string} Base URL
+ * @param req - Express request object
+ * @returns Base URL
  */
-function getBaseUrl(req) {
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0];
+function getBaseUrl(req: Request): string {
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http')
+    .toString()
+    .split(',')[0];
   const host = req.get('host');
   return `${proto}://${host}`;
 }
@@ -220,37 +263,33 @@ function getBaseUrl(req) {
 /**
  * Get service statuses for admin panel
  * Instantiates services to read their TTL configs, then reads status from state
- * @returns {Object} All service statuses
+ * @returns All service statuses
  */
-function getServiceStatuses() {
-  const { getStateKey } = require('./state');
-  
+export function getServiceStatuses(): Record<string, ServiceStatus> {
   // Instantiate services to get their TTL values
   const weatherService = new WeatherService();
   const ambientService = new AmbientService();
   const llmService = new LLMService();
-  const vehiclesService = new VehiclesService();
   const calendarService = new CalendarService();
-  
+
   // Service definitions
-  const serviceConfigs = {
+  const serviceConfigs: Record<string, { service: any }> = {
     weather: { service: weatherService },
     ambient: { service: ambientService },
     llm: { service: llmService },
-    vehicles: { service: vehiclesService },
     calendar: { service: calendarService },
   };
-  
-  const allStatuses = getStateKey('service_status', {});
-  const allCaches = getStateKey('service_cache', {});
-  
-  const statuses = {};
+
+  const allStatuses = getStateKey<Record<string, Partial<ServiceStatus>>>('service_status', {});
+  const allCaches = getStateKey<Record<string, { fetchedAt?: number }>>('service_cache', {});
+
+  const statuses: Record<string, ServiceStatus> = {};
   for (const [key, cfg] of Object.entries(serviceConfigs)) {
     const service = cfg.service;
     const savedStatus = allStatuses[service.cacheKey] || {};
     const cache = allCaches[service.cacheKey];
     const isEnabled = service.isEnabled();
-    
+
     statuses[key] = {
       name: service.name,
       isEnabled,
@@ -261,56 +300,57 @@ function getServiceStatuses() {
       error: savedStatus.error || null,
     };
   }
-  
+
   return statuses;
 }
 
 /**
  * Compare today's high with yesterday's high
  * Stores daily highs for the last 3 days for historical comparison
- * @param {number} todayHigh - Today's forecast high temperature
- * @returns {string|null} Comparison string or null if no yesterday data
+ * @param todayHigh - Today's forecast high temperature
+ * @param unitSystem - Unit system (us or metric)
+ * @returns Comparison string or null if no yesterday data
  */
-function computeTempComparison(todayHigh, unitSystem = 'us') {
+function computeTempComparison(todayHigh: number | undefined, unitSystem: UnitSystem = 'us'): string | null {
   if (todayHigh == null) return null;
-  
+
   // Use local dates, not UTC (important for timezone-aware comparison)
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  
+
   // Get yesterday's date
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-  
+
   // Get daily highs history keyed by unit system
-  const storedHighs = getStateKey('daily_highs', {});
+  const storedHighs = getStateKey<Record<string, Record<string, number>>>('daily_highs', {});
   const unitKey = unitSystem === 'metric' ? 'metric' : 'us';
   const dailyHighs = storedHighs[unitKey] || {};
 
   // Store today's high if not already stored for today
   if (!dailyHighs[todayStr]) {
     dailyHighs[todayStr] = todayHigh;
-    
+
     // Keep only last 3 days
     const allDates = Object.keys(dailyHighs).sort().reverse();
     const recentDates = allDates.slice(0, 3);
-    const trimmedHighs = {};
+    const trimmedHighs: Record<string, number> = {};
     recentDates.forEach(date => {
       trimmedHighs[date] = dailyHighs[date];
     });
-    
+
     const nextState = { ...storedHighs, [unitKey]: trimmedHighs };
     setStateKey('daily_highs', nextState);
     return null; // Need a previous value to compare; return on first store
   }
-  
+
   // Compare with yesterday's high if available
   const yesterdayHigh = dailyHighs[yesterdayStr];
   if (yesterdayHigh == null) return null; // No comparison available
-  
+
   const diff = Number(todayHigh) - Number(yesterdayHigh);
-  
+
   // Determine comparison based on temperature difference
   const threshold = unitSystem === 'metric' ? 0.5 : 1;
   const strongThreshold = unitSystem === 'metric' ? 5.5 : 10; // ~10°F ≈ 5.5°C
@@ -327,9 +367,12 @@ function computeTempComparison(todayHigh, unitSystem = 'us') {
   }
 }
 
-function buildCurrentFromAmbient(ambient, mainLocation, unitSystem, windDirectionFallback) {
-  if (!ambient) return buildCurrentFromWeather(mainLocation, unitSystem, windDirectionFallback);
-
+function buildCurrentFromAmbient(
+  ambient: AmbientData,
+  mainLocation: WeatherLocation,
+  unitSystem: UnitSystem,
+  windDirectionFallback: (dir: number) => string
+): CurrentWeather {
   const temp = unitSystem === 'metric' ? ambient.current_temp_c : ambient.current_temp_f;
   const tempF = ambient.current_temp_f ?? ambient.current_temp ?? null;
   const tempC = ambient.current_temp_c ?? (tempF != null ? convertFtoC(tempF) : null);
@@ -348,12 +391,12 @@ function buildCurrentFromAmbient(ambient, mainLocation, unitSystem, windDirectio
   const windDirection = ambient.wind?.direction || windDirectionFallback(mainLocation.wind_dir);
 
   return {
-    temp: roundValue(temp),
-    temp_f: roundValue(tempF),
-    temp_c: roundValue(tempC),
-    feels_like: roundValue(feels),
-    feels_like_f: roundValue(feelsF),
-    feels_like_c: roundValue(feelsC),
+    temp: roundValue(temp ?? 0),
+    temp_f: roundValue(tempF ?? 0),
+    temp_c: roundValue(tempC ?? 0),
+    feels_like: roundValue(feels ?? 0),
+    feels_like_f: roundValue(feelsF ?? 0),
+    feels_like_c: roundValue(feelsC ?? 0),
     humidity: ambient.humidity ?? mainLocation.humidity ?? 0,
     pressure: pressure != null ? roundValue(pressure, unitSystem === 'metric' ? 0 : 2) : null,
     pressure_in: pressureIn != null ? roundValue(pressureIn, 2) : null,
@@ -369,7 +412,11 @@ function buildCurrentFromAmbient(ambient, mainLocation, unitSystem, windDirectio
   };
 }
 
-function buildCurrentFromWeather(location, unitSystem, windDirectionFallback) {
+function buildCurrentFromWeather(
+  location: WeatherLocation,
+  unitSystem: UnitSystem,
+  windDirectionFallback: (dir: number) => string
+): CurrentWeather {
   const temp = unitSystem === 'metric' ? location.current_temp_c : location.current_temp_f;
   const feels = unitSystem === 'metric'
     ? (location.feels_like_c != null ? location.feels_like_c : location.current_temp_c)
@@ -383,11 +430,11 @@ function buildCurrentFromWeather(location, unitSystem, windDirectionFallback) {
 
   return {
     temp: roundValue(temp),
-    temp_f: location.current_temp_f != null ? roundValue(location.current_temp_f) : null,
-    temp_c: location.current_temp_c != null ? roundValue(location.current_temp_c) : null,
-  feels_like: roundValue(feels),
-  feels_like_f: location.feels_like_f != null ? roundValue(location.feels_like_f) : (location.current_temp_f != null ? roundValue(location.current_temp_f) : null),
-  feels_like_c: location.feels_like_c != null ? roundValue(location.feels_like_c) : (location.current_temp_c != null ? roundValue(location.current_temp_c) : null),
+    temp_f: location.current_temp_f != null ? roundValue(location.current_temp_f) : 0,
+    temp_c: location.current_temp_c != null ? roundValue(location.current_temp_c) : 0,
+    feels_like: roundValue(feels),
+    feels_like_f: location.feels_like_f != null ? roundValue(location.feels_like_f) : (location.current_temp_f != null ? roundValue(location.current_temp_f) : 0),
+    feels_like_c: location.feels_like_c != null ? roundValue(location.feels_like_c) : (location.current_temp_c != null ? roundValue(location.current_temp_c) : 0),
     humidity: location.humidity || 0,
     pressure: pressure != null ? roundValue(pressure, unitSystem === 'metric' ? 0 : 2) : null,
     pressure_in: pressureIn != null ? roundValue(pressureIn, 2) : null,
@@ -403,23 +450,27 @@ function buildCurrentFromWeather(location, unitSystem, windDirectionFallback) {
   };
 }
 
-function normalizePrecipitationData(ambientPrecip, weatherPrecip = {}, unitSystem) {
+function normalizePrecipitationData(
+  ambientPrecip: AmbientPrecipitationData | undefined,
+  weatherPrecip: PrecipitationData | undefined,
+  unitSystem: UnitSystem
+): PrecipitationData {
   const source = ambientPrecip || weatherPrecip || {};
   const units = unitSystem === 'metric' ? 'mm' : 'in';
 
-  const last24In = resolvePrecipValue(source.last_24h_in, source.last_24h_mm, source.last_24h, source.units, 'in');
-  const last24Mm = resolvePrecipValue(source.last_24h_mm, source.last_24h_in, source.last_24h, source.units, 'mm');
+  const last24In = resolvePrecipValue(source.last_24h_in, source.last_24h_mm, source.last_24h, 'in');
+  const last24Mm = resolvePrecipValue(source.last_24h_mm, source.last_24h_in, source.last_24h, 'mm');
 
-  const weekIn = resolvePrecipValue(source.week_total_in, source.week_total_mm, source.week_total, source.units, 'in');
-  const weekMm = resolvePrecipValue(source.week_total_mm, source.week_total_in, source.week_total, source.units, 'mm');
+  const weekIn = resolvePrecipValue(source.week_total_in, source.week_total_mm, source.week_total, 'in');
+  const weekMm = resolvePrecipValue(source.week_total_mm, source.week_total_in, source.week_total, 'mm');
 
-  const monthIn = resolvePrecipValue(source.month_total_in, source.month_total_mm, source.month_total, source.units, 'in');
-  const monthMm = resolvePrecipValue(source.month_total_mm, source.month_total_in, source.month_total, source.units, 'mm');
+  const monthIn = resolvePrecipValue(source.month_total_in, source.month_total_mm, source.month_total, 'in');
+  const monthMm = resolvePrecipValue(source.month_total_mm, source.month_total_in, source.month_total, 'mm');
 
-  const yearIn = resolvePrecipValue(source.year_total_in, source.year_total_mm, source.year_total, source.units, 'in');
-  const yearMm = resolvePrecipValue(source.year_total_mm, source.year_total_in, source.year_total, source.units, 'mm');
+  const yearIn = resolvePrecipValue(source.year_total_in, source.year_total_mm, source.year_total, 'in');
+  const yearMm = resolvePrecipValue(source.year_total_mm, source.year_total_in, source.year_total, 'mm');
 
-  const formatValue = (value) => (value == null ? null : Number(value.toFixed(2)));
+  const formatValue = (value: number | null): number | null => (value == null ? null : Number(value.toFixed(2)));
 
   const last24Display = formatValue(units === 'mm' ? last24Mm : last24In);
   const last24InDisplay = formatValue(last24In);
@@ -454,21 +505,26 @@ function normalizePrecipitationData(ambientPrecip, weatherPrecip = {}, unitSyste
   };
 }
 
-function roundValue(value, decimals = 0) {
-  if (value == null || !Number.isFinite(Number(value))) return value;
+function roundValue(value: number | null, decimals: number = 0): number {
+  if (value == null || !Number.isFinite(Number(value))) return value ?? 0;
   const factor = 10 ** decimals;
   return Math.round(Number(value) * factor) / factor;
 }
 
-function convertFtoC(value) {
+function convertFtoC(value: number): number {
   return (Number(value) - 32) * 5 / 9;
 }
 
-function convertInHgToHpa(value) {
+function convertInHgToHpa(value: number): number {
   return Number(value) * 33.8638866667;
 }
 
-function resolvePrecipValue(primary, secondary, fallback, unitLabel, targetUnit) {
+function resolvePrecipValue(
+  primary: number | null | undefined,
+  secondary: number | null | undefined,
+  fallback: number | null | undefined,
+  targetUnit: 'in' | 'mm'
+): number | null {
   const hasPrimary = primary != null;
   const hasSecondary = secondary != null;
   const hasFallback = fallback != null;
@@ -483,19 +539,8 @@ function resolvePrecipValue(primary, secondary, fallback, unitLabel, targetUnit)
     if (targetUnit === 'mm') return Number(secondary) * 25.4;
   }
   if (hasFallback) {
-    if (unitLabel === 'mm') {
-      return targetUnit === 'mm' ? Number(fallback) : Number(fallback) / 25.4;
-    }
-    if (unitLabel === 'in') {
-      return targetUnit === 'in' ? Number(fallback) : Number(fallback) * 25.4;
-    }
     // Unknown unit; assume inches for backwards compatibility
     return targetUnit === 'mm' ? Number(fallback) * 25.4 : Number(fallback);
   }
   return null;
 }
-
-module.exports = {
-  buildDashboardData,
-  getServiceStatuses,
-};

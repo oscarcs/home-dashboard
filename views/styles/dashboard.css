@@ -294,12 +294,3 @@ body {
   border-radius: 12px;
   margin-top: -4px;
 }
-
-/* Vehicles */
-.vehicles {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 0 8px;
-}

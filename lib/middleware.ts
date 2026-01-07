@@ -1,13 +1,14 @@
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const { v4: uuidv4 } = require('uuid');
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import { v4 as uuidv4 } from 'uuid';
+import type { Request, Response, NextFunction, Application, RequestHandler } from 'express';
 
 /**
  * Security headers middleware using Helmet
  * Relaxed config for local-only dashboard
  */
-function securityHeaders() {
+export function securityHeaders(): RequestHandler {
   return helmet({
     contentSecurityPolicy: false, // Disabled for local dashboard
     crossOriginResourcePolicy: false,
@@ -18,33 +19,33 @@ function securityHeaders() {
 /**
  * Correlation ID and request timing middleware
  */
-function correlationAndTiming(req, res, next) {
-  const corrId = req.headers['x-correlation-id'] || uuidv4();
+export function correlationAndTiming(req: Request, res: Response, next: NextFunction): void {
+  const corrId = (req.headers['x-correlation-id'] as string) || uuidv4();
   res.locals.corrId = corrId;
   res.setHeader('X-Correlation-Id', corrId);
-  
+
   const start = process.hrtime.bigint();
   res.on('finish', () => {
     const end = process.hrtime.bigint();
     const ms = Number(end - start) / 1e6;
     console.log(`[${corrId}] ${req.method} ${req.originalUrl} -> ${res.statusCode} in ${ms.toFixed(1)}ms`);
   });
-  
+
   // Safety timeout on responses
   res.setTimeout(60_000, () => {
     console.warn(`[${corrId}] Response timeout`);
-    try { 
-      res.status(504).json({ error: 'Gateway Timeout' }); 
+    try {
+      res.status(504).json({ error: 'Gateway Timeout' });
     } catch (_) {}
   });
-  
+
   next();
 }
 
 /**
  * Prevent caching for polling clients
  */
-function noCacheHeaders(req, res, next) {
+export function noCacheHeaders(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -55,9 +56,9 @@ function noCacheHeaders(req, res, next) {
 /**
  * Rate limiting middleware
  */
-function rateLimiter() {
-  return rateLimit({ 
-    windowMs: 60 * 1000, 
+export function rateLimiter(): RequestHandler {
+  return rateLimit({
+    windowMs: 60 * 1000,
     max: 60,
     message: { error: 'Too many requests' }
   });
@@ -66,18 +67,10 @@ function rateLimiter() {
 /**
  * Apply all standard middleware to Express app
  */
-function applyMiddleware(app) {
+export function applyMiddleware(app: Application): void {
   app.use(morgan('dev'));
   app.use(securityHeaders());
   app.use(correlationAndTiming);
   app.use(rateLimiter());
   app.use(noCacheHeaders);
 }
-
-module.exports = {
-  securityHeaders,
-  correlationAndTiming,
-  noCacheHeaders,
-  rateLimiter,
-  applyMiddleware,
-};

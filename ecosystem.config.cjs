@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'weather-dashboard',
-    script: './server.js',
+    script: './dist/server.js',
     cwd: __dirname,
     instances: 1,
     autorestart: true,

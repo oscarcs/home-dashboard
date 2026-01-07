@@ -2,73 +2,169 @@
  * Weather utility functions shared across weather services
  */
 
+import type { CurrentWeather, ForecastDay, HourlyForecast, UnitSystem, Units } from './types.js';
+
+interface IconAndDescription {
+  icon: string;
+  description: string;
+}
+
+interface WeatherDataForStatic {
+  current?: Partial<CurrentWeather> & {
+    temp_f?: number;
+    temp_c?: number;
+    temp?: number;
+    description?: string;
+  };
+  forecast?: Array<Partial<ForecastDay> & {
+    high?: number;
+    high_f?: number;
+    high_c?: number;
+    low?: number;
+    low_f?: number;
+    low_c?: number;
+    rain_chance?: number;
+  }>;
+  hourlyForecast?: Array<Partial<HourlyForecast> & {
+    temp?: number;
+    temp_f?: number;
+    temp_c?: number;
+    rain_chance?: number;
+  }>;
+  units?: Units;
+}
+
+interface TimeContext {
+  period: 'morning' | 'afternoon' | 'evening' | 'night';
+}
+
+interface Thresholds {
+  coldMorning: number;
+  warmMorning: number;
+  warmAfternoon: number;
+  hotAfternoon: number;
+  coolAfternoon: number;
+  coolEvening: number;
+  coldNight: number;
+  warmNight: number;
+  hotNight: number;
+  bigSwing: number;
+  largeWarmup: number;
+  largeDrop: number;
+  rainChance: number;
+}
+
+interface SummaryParams {
+  currentTemp: number;
+  highTemp: number;
+  lowTemp: number;
+  condition: string;
+  isRainy: boolean;
+  hasBigSwing: boolean;
+  tempRange: number;
+  thresholds: Thresholds;
+}
+
+interface AfternoonSummaryParams {
+  currentTemp: number;
+  highTemp: number;
+  lowTemp: number;
+  condition: string;
+  isRainy: boolean;
+  thresholds: Thresholds;
+}
+
+interface EveningSummaryParams {
+  currentTemp: number;
+  lowTemp: number;
+  condition: string;
+  isRainy: boolean;
+  thresholds: Thresholds;
+}
+
+interface NightSummaryParams {
+  tomorrowHigh: number;
+  tomorrowLow: number;
+  condition: string;
+  isRainy: boolean;
+  thresholds: Thresholds;
+}
+
+interface SummaryResult {
+  summary: string;
+  clothing: string;
+}
+
+interface StaticDescription {
+  clothing_suggestion: string;
+  daily_summary: string;
+}
+
 /**
  * Map weather condition text to icon and description
  * This function analyzes weather condition text and returns a standardized
  * icon code and description that can be used across the application.
- * 
- * @param {string} conditionText - Weather condition text from API
- * @returns {Object} Object with icon code and description
- * @returns {string} return.icon - Standardized icon code (e.g., 'sunny', 'rain', 'cloudy')
- * @returns {string} return.description - Human-readable description
- * 
+ *
+ * @param conditionText - Weather condition text from API
+ * @returns Object with icon code and description
+ *
  * @example
  * mapIconAndDescription('Partly Cloudy')
  * // Returns: { icon: 'partly_cloudy', description: 'Partly Cloudy' }
  */
-function mapIconAndDescription(conditionText = '') {
+export function mapIconAndDescription(conditionText: string = ''): IconAndDescription {
   const text = String(conditionText).toLowerCase();
-  
+
   // Thunderstorms and severe weather
   if (/(thunder|storm)/.test(text)) {
     return { icon: 'stormy', description: conditionText || 'Stormy' };
   }
-  
+
   // Snow and winter precipitation
   if (/(snow|sleet|blizzard)/.test(text)) {
     return { icon: 'snow', description: conditionText || 'Snow' };
   }
-  
+
   // Rain and precipitation
   if (/(rain|drizzle|showers)/.test(text)) {
     return { icon: 'rain', description: conditionText || 'Rain' };
   }
-  
+
   // Fog and mist
   if (/(fog|mist|haze|smoke)/.test(text)) {
     return { icon: 'fog', description: conditionText || 'Fog' };
   }
-  
+
   // Partly cloudy (must check before fully cloudy)
   if (/(partly|mostly)\s*(cloudy|sunny)/.test(text)) {
     return { icon: 'partly_cloudy', description: conditionText || 'Partly Cloudy' };
   }
-  
+
   // Cloudy and overcast
   if (/(overcast|cloud)/.test(text)) {
     return { icon: 'cloudy', description: conditionText || 'Cloudy' };
   }
-  
+
   // Clear and sunny (default)
   if (/(clear|sunny|fair)/.test(text)) {
     return { icon: 'sunny', description: conditionText || 'Clear' };
   }
-  
+
   // Default fallback
   return { icon: 'sunny', description: conditionText || 'Clear' };
 }
 
 /**
  * Convert wind direction degrees to cardinal direction text
- * 
- * @param {number} degrees - Wind direction in degrees (0-360)
- * @returns {string} Cardinal direction (e.g., 'N', 'NE', 'SSW')
- * 
+ *
+ * @param degrees - Wind direction in degrees (0-360)
+ * @returns Cardinal direction (e.g., 'N', 'NE', 'SSW')
+ *
  * @example
  * getWindDirection(45)
  * // Returns: 'NE'
  */
-function getWindDirection(degrees) {
+export function getWindDirection(degrees: number): string {
   const directions = [
     'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
     'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
@@ -80,16 +176,11 @@ function getWindDirection(degrees) {
 /**
  * Build static weather description as fallback when LLM service is unavailable
  * Generates time-aware descriptions with similar vibe to LLM service
- * 
- * @param {Object} weatherData - Weather data object
- * @param {Object} weatherData.current - Current conditions
- * @param {number} weatherData.current.temp_f - Current temperature
- * @param {string} weatherData.current.description - Current weather description
- * @param {Array} weatherData.forecast - Daily forecast array
- * @param {Array} weatherData.hourlyForecast - Hourly forecast array
- * @returns {Object} Object with clothing_suggestion and daily_summary
+ *
+ * @param weatherData - Weather data object
+ * @returns Object with clothing_suggestion and daily_summary
  */
-function buildStaticDescription(weatherData) {
+export function buildStaticDescription(weatherData: WeatherDataForStatic): StaticDescription {
   const hour = new Date().getHours();
   const timeContext = getTimeContext(hour);
 
@@ -99,7 +190,7 @@ function buildStaticDescription(weatherData) {
   const current = weatherData.current || {};
   const hourlyForecast = weatherData.hourlyForecast || [];
 
-  const selectTemp = (valueF, valueC) => {
+  const selectTemp = (valueF?: number | null, valueC?: number | null): number => {
     if (unitSystem === 'metric') {
       if (valueC != null && valueC !== undefined) return Number(valueC);
       if (valueF != null && valueF !== undefined) return convertFtoC(valueF);
@@ -111,7 +202,7 @@ function buildStaticDescription(weatherData) {
   };
 
   const todayForecast = weatherData.forecast?.[0] || {};
-  const tomorrowForecast = weatherData.forecast?.[0] || {};
+  const tomorrowForecast = weatherData.forecast?.[1] || {};
 
   const currentTemp = selectTemp(current.temp_f, current.temp_c ?? current.temp);
   const highTemp = selectTemp(todayForecast.high_f ?? todayForecast.high, todayForecast.high_c ?? todayForecast.high);
@@ -133,8 +224,8 @@ function buildStaticDescription(weatherData) {
 
   const hasBigSwing = tempRange >= thresholds.bigSwing;
 
-  let summary;
-  let clothing;
+  let summary: string;
+  let clothing: string;
 
   if (timeContext.period === 'morning') {
     ({ summary, clothing } = buildMorningSummary({
@@ -182,7 +273,7 @@ function buildStaticDescription(weatherData) {
   };
 }
 
-function getTimeContext(hour) {
+function getTimeContext(hour: number): TimeContext {
   if (hour >= 5 && hour < 11) {
     return { period: 'morning' };
   } else if (hour >= 11 && hour < 16) {
@@ -194,13 +285,14 @@ function getTimeContext(hour) {
   }
 }
 
-function buildMorningSummary({ currentTemp, highTemp, lowTemp, condition, isRainy, hasBigSwing, tempRange, thresholds }) {
+function buildMorningSummary({ currentTemp, highTemp, condition, isRainy, hasBigSwing, tempRange, thresholds }: SummaryParams): SummaryResult {
   const isCold = currentTemp < thresholds.coldMorning;
   const isWarm = currentTemp >= thresholds.warmMorning;
   const willWarmUp = highTemp - currentTemp >= thresholds.largeWarmup;
-  
-  let summary, clothing;
-  
+
+  let summary: string;
+  let clothing: string;
+
   if (isRainy) {
     clothing = "Rain gear and warm layers";
     if (isCold) {
@@ -233,17 +325,18 @@ function buildMorningSummary({ currentTemp, highTemp, lowTemp, condition, isRain
       summary = "Pleasant morning with comfortable temps, nice conditions all day";
     }
   }
-  
+
   return { summary, clothing };
 }
 
-function buildAfternoonSummary({ currentTemp, highTemp, lowTemp, condition, isRainy, thresholds }) {
+function buildAfternoonSummary({ currentTemp, condition, isRainy, thresholds }: AfternoonSummaryParams): SummaryResult {
   const isHot = currentTemp >= thresholds.hotAfternoon;
   const isWarm = currentTemp >= thresholds.warmAfternoon;
   const isCool = currentTemp < thresholds.coolAfternoon;
-  
-  let summary, clothing;
-  
+
+  let summary: string;
+  let clothing: string;
+
   if (isRainy) {
     clothing = "Umbrella and light jacket";
     summary = "Rainy afternoon continuing into evening, staying wet and overcast";
@@ -264,16 +357,17 @@ function buildAfternoonSummary({ currentTemp, highTemp, lowTemp, condition, isRa
     clothing = "Light jacket for evening";
     summary = "Pleasant afternoon temperatures, comfortable conditions into evening";
   }
-  
+
   return { summary, clothing };
 }
 
-function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresholds }) {
+function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresholds }: EveningSummaryParams): SummaryResult {
   const isCool = currentTemp < thresholds.coolEvening;
   const willCoolDown = currentTemp - lowTemp >= thresholds.largeDrop;
-  
-  let summary, clothing;
-  
+
+  let summary: string;
+  let clothing: string;
+
   if (isRainy) {
     clothing = "Jacket and umbrella";
     summary = "Rainy evening ahead, staying wet and cool as the night sets in";
@@ -299,17 +393,18 @@ function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresho
       summary = "Mild and comfortable evening, nice conditions as the night sets in";
     }
   }
-  
+
   return { summary, clothing };
 }
 
-function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thresholds }) {
+function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thresholds }: NightSummaryParams): SummaryResult {
   const willBeCold = tomorrowLow < thresholds.coldNight;
   const willBeHot = tomorrowHigh >= thresholds.hotNight;
   const willBeWarm = tomorrowHigh >= thresholds.warmNight;
-  
-  let summary, clothing;
-  
+
+  let summary: string;
+  let clothing: string;
+
   if (isRainy) {
     clothing = "Rain gear ready for tomorrow";
     if (willBeCold) {
@@ -338,12 +433,12 @@ function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thre
     clothing = "Light jacket for tomorrow";
     summary = "Tomorrow comfortable and mild, nice conditions throughout the day ahead";
   }
-  
+
   return { summary, clothing };
 }
 
-function deriveThresholds(unitSystem) {
-  const toUnit = (value, isDelta = false) => {
+function deriveThresholds(unitSystem: UnitSystem): Thresholds {
+  const toUnit = (value: number, isDelta: boolean = false): number => {
     if (unitSystem === 'metric') {
       return isDelta ? value * 5 / 9 : convertFtoC(value);
     }
@@ -367,16 +462,10 @@ function deriveThresholds(unitSystem) {
   };
 }
 
-function convertFtoC(value) {
+function convertFtoC(value: number): number {
   return (Number(value) - 32) * 5 / 9;
 }
 
-function convertCtoF(value) {
+function convertCtoF(value: number): number {
   return (Number(value) * 9) / 5 + 32;
 }
-
-module.exports = {
-  mapIconAndDescription,
-  getWindDirection,
-  buildStaticDescription,
-};

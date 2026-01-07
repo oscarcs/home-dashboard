@@ -450,37 +450,6 @@
           <div class="aqi-pill text-label"><%= air_quality.aqi %></div>
         </div>
       </div>
-      
-      <% if (vehicles && vehicles.length > 0) { %>
-      <div class="vehicles">
-        <% vehicles.slice(0, 2).forEach(function(vehicle) { %>
-        <div class="flex items-center" style="gap: 12px">
-          <% if (vehicle.make) { %>
-            <% const brandLower = vehicle.make.trim().toLowerCase().replace(/\s+/g, '-'); %>
-            <% const logoPath = `/assets/vehicle-logo/${brandLower}.png`; %>
-            <div>
-              <img 
-                src="<%= logoPath %>" 
-                alt="<%= vehicle.make %>" 
-                width="40" 
-                height="40" 
-                style="display: block;"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-              >
-              <span style="display: none; height: 40px; align-items: center;" class="text-sm"><%= vehicle.make %></span>
-            </div>
-          <% } else { %>
-            <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-              <i class="ph-bold ph-car" style="font-size: 24px;"></i>
-            </div>
-          <% } %>
-          <div>
-            <%= vehicle.percent %>%<div class="slash"></div><%= Math.round(vehicle.range_miles) %>mi
-          </div>
-        </div>
-        <% }); %>
-      </div>
-      <% } %>
     </div>
     
     <div class="flex flex-col" style="gap: 16px;">

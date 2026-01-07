@@ -1,16 +1,99 @@
-const axios = require('axios');
-const fs = require('fs');
-const { BaseService } = require('../lib/BaseService');
-const { AUTH_PATH } = require('../lib/paths');
-const { getStateKey, setStateKey } = require('../lib/state');
-const { getWindDirection } = require('../lib/weatherUtils');
+import axios from 'axios';
+import fs from 'fs';
+import { BaseService } from '../lib/BaseService.js';
+import { AUTH_PATH } from '../lib/paths.js';
+import { getWindDirection } from '../lib/weatherUtils.js';
+import type { Logger } from '../lib/types.js';
+
+// ============================================================================
+// Ambient Weather API Response Types
+// ============================================================================
+
+interface AmbientWeatherDevice {
+  macAddress: string;
+  info?: {
+    name?: string;
+    location?: string;
+  };
+}
+
+interface AmbientWeatherApiData {
+  dateutc: number;
+  tempf: number;
+  humidity: number;
+  windspeedmph: number;
+  winddir: number;
+  baromrelin?: number;
+  baromabsin?: number;
+  rainratein?: number;
+  dailyrainin?: number;
+  weeklyrainin?: number;
+  monthlyrainin?: number;
+  yearlyrainin?: number;
+  solarradiation?: number;
+  feelsLike?: number;
+  feelslikef?: number;
+}
+
+// ============================================================================
+// Ambient Service Output Types
+// ============================================================================
+
+interface AmbientWindData {
+  speed_mph: number;
+  speed_kmh: number;
+  direction: string;
+}
+
+interface AmbientPrecipitationData {
+  last_24h_in: number;
+  last_24h_mm: number;
+  week_total_in: number;
+  week_total_mm: number;
+  month_total_in: number;
+  month_total_mm: number;
+  year_total_in: number;
+  year_total_mm: number;
+  last_24h: number;
+  week_total: number;
+  month_total: number;
+  year_total: number;
+  units: string;
+}
+
+interface AmbientDashboardData {
+  current_temp_f: number;
+  current_temp_c: number;
+  current_temp: number;
+  feels_like_f: number;
+  feels_like_c: number;
+  feels_like: number;
+  humidity: number;
+  pressure_in: number;
+  pressure: number;
+  pressure_hpa: number;
+  wind: AmbientWindData;
+  precipitation: AmbientPrecipitationData;
+  solar_radiation: number;
+}
+
+interface AmbientServiceConfig {
+  baseUrl?: string;
+  ambient_application_key?: string;
+  ambient_api_key?: string;
+  ambient_device_mac?: string;
+}
+
+// ============================================================================
+// Ambient Weather Service Class
+// ============================================================================
 
 /**
  * Ambient Weather Service (Personal Weather Station) - OPTIONAL
  * Provides hyper-local current conditions that override WeatherAPI data
  */
-class AmbientService extends BaseService {
-  constructor(cacheTTLMinutes = 10) {
+class AmbientService extends BaseService<AmbientDashboardData, AmbientServiceConfig> {
+  constructor(cacheTTLMinutes: number = 10) {
     super({
       name: 'AmbientWeather',
       cacheKey: 'ambient',
@@ -20,13 +103,13 @@ class AmbientService extends BaseService {
     });
   }
 
-  isEnabled() {
+  isEnabled(): boolean {
     const appKey = process.env.AMBIENT_APPLICATION_KEY;
     const apiKey = process.env.AMBIENT_API_KEY;
     return !!(appKey && apiKey);
   }
 
-  async fetchData(config, logger) {
+  async fetchData(config: AmbientServiceConfig, logger: Logger): Promise<AmbientWeatherApiData> {
     const appKey = process.env.AMBIENT_APPLICATION_KEY || config?.ambient_application_key;
     const apiKey = process.env.AMBIENT_API_KEY || config?.ambient_api_key;
 
@@ -39,7 +122,7 @@ class AmbientService extends BaseService {
 
     // Fetch current data for the device
     const url = this.buildApiUrl(`devices/${deviceMac}`, appKey, apiKey, { limit: 1 });
-    const response = await axios.get(url, { timeout: 10000 });
+    const response = await axios.get<AmbientWeatherApiData[]>(url, { timeout: 10000 });
 
     if (response.status !== 200) {
       throw new Error(`Ambient Weather API returned status ${response.status}`);
@@ -53,7 +136,7 @@ class AmbientService extends BaseService {
     return rawData[0];
   }
 
-  async getDeviceMac(config, appKey, apiKey, logger) {
+  async getDeviceMac(config: AmbientServiceConfig, appKey: string, apiKey: string, logger: Logger): Promise<string> {
     // Priority 1: Config/env
     const configured = config?.ambient_device_mac || process.env.AMBIENT_DEVICE_MAC;
     if (configured) return configured;
@@ -65,7 +148,7 @@ class AmbientService extends BaseService {
     // Priority 3: Fetch from API
     logger.info?.('[AmbientWeather] Fetching device list...');
     const url = this.buildApiUrl('devices', appKey, apiKey);
-    const response = await axios.get(url, { timeout: 10000 });
+    const response = await axios.get<AmbientWeatherDevice[]>(url, { timeout: 10000 });
 
     if (response.status !== 200 || !response.data || response.data.length === 0) {
       throw new Error('No Ambient Weather devices found');
@@ -73,14 +156,14 @@ class AmbientService extends BaseService {
 
     const mac = response.data[0].macAddress;
     this.storeDeviceMac(mac);
-    
+
     // Wait 1 second to respect rate limits before next call
     await this.sleep(1000);
-    
+
     return mac;
   }
 
-  buildApiUrl(endpoint, appKey, apiKey, params = {}) {
+  buildApiUrl(endpoint: string, appKey: string, apiKey: string, params: Record<string, string | number> = {}): string {
     const url = new URL(`https://rt.ambientweather.net/v1/${endpoint}`);
     url.searchParams.set('applicationKey', appKey);
     url.searchParams.set('apiKey', apiKey);
@@ -94,29 +177,32 @@ class AmbientService extends BaseService {
     return url.toString();
   }
 
-  getStoredDeviceMac() {
+  getStoredDeviceMac(): string | null {
     try {
       if (fs.existsSync(AUTH_PATH)) {
-        const auth = JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8'));
+        const auth = JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8')) as { ambient_device_mac?: string };
         return auth.ambient_device_mac || null;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Ignore errors
+    }
     return null;
   }
 
-  storeDeviceMac(mac) {
+  storeDeviceMac(mac: string): void {
     try {
-      const auth = fs.existsSync(AUTH_PATH) 
-        ? JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8')) 
+      const auth: { ambient_device_mac?: string } = fs.existsSync(AUTH_PATH)
+        ? JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8'))
         : {};
       auth.ambient_device_mac = mac;
       fs.writeFileSync(AUTH_PATH, JSON.stringify(auth, null, 2));
     } catch (err) {
-      console.warn('Failed to store device MAC:', err.message);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.warn('Failed to store device MAC:', errorMessage);
     }
   }
 
-  mapToDashboard(apiData, config) {
+  mapToDashboard(apiData: AmbientWeatherApiData, _config: AmbientServiceConfig): AmbientDashboardData {
     const tempF = Number(apiData.tempf) || 0;
     const tempC = (tempF - 32) * 5 / 9;
     const feelsLikeF = Number(apiData.feelsLike || apiData.feelslikef) || tempF;
@@ -127,21 +213,20 @@ class AmbientService extends BaseService {
     const windDir = apiData.winddir || 0;
     const pressureInHg = Number(apiData.baromrelin || apiData.baromabsin) || 0;
     const pressureHpa = pressureInHg * 33.8638866667;
-    const rainRate = Number(apiData.rainratein) || 0;
     const solarRadiation = Number(apiData.solarradiation) || 0;
 
     const windDirection = getWindDirection(windDir);
 
     return {
-  current_temp_f: Math.round(tempF * 10) / 10,
-  current_temp_c: Math.round(tempC * 10) / 10,
-  current_temp: Math.round(tempF * 10) / 10,
-  feels_like_f: Math.round(feelsLikeF * 10) / 10,
-  feels_like_c: Math.round(feelsLikeC * 10) / 10,
-  feels_like: Math.round(feelsLikeF * 10) / 10,
+      current_temp_f: Math.round(tempF * 10) / 10,
+      current_temp_c: Math.round(tempC * 10) / 10,
+      current_temp: Math.round(tempF * 10) / 10,
+      feels_like_f: Math.round(feelsLikeF * 10) / 10,
+      feels_like_c: Math.round(feelsLikeC * 10) / 10,
+      feels_like: Math.round(feelsLikeF * 10) / 10,
       humidity: Math.round(humidity),
-  pressure_in: Math.round(pressureInHg * 100) / 100,
-  pressure: Math.round(pressureInHg * 100) / 100,
+      pressure_in: Math.round(pressureInHg * 100) / 100,
+      pressure: Math.round(pressureInHg * 100) / 100,
       pressure_hpa: Math.round(pressureHpa),
       wind: {
         speed_mph: Math.round(windSpeedMph * 10) / 10,
@@ -166,7 +251,6 @@ class AmbientService extends BaseService {
       solar_radiation: solarRadiation,
     };
   }
-
 }
 
-module.exports = { AmbientService };
+export { AmbientService };

@@ -106,33 +106,6 @@ Display upcoming calendar events.
    ```
 8. Visit `http://localhost:7272/admin` and click "Connect Google Calendar"
 
-### Smartcar API (Optional)
-Vehicle battery/fuel level and range information for supported vehicles.
-
-1. Sign up at [dashboard.smartcar.com](https://dashboard.smartcar.com/)
-2. Create a new application
-3. Add redirect URI: `http://localhost:7272/auth/smartcar/callback`
-4. Note your Client ID and Secret
-5. Add to `.env`:
-   ```bash
-   SMARTCAR_CLIENT_ID=your_client_id
-   SMARTCAR_CLIENT_SECRET=your_client_secret
-   SMARTCAR_REDIRECT_URI=http://localhost:7272/auth/smartcar/callback # If you change the port, you must update this
-   SMARTCAR_MODE=live  # Use 'live' for real vehicle data
-   ```
-6. Visit `http://localhost:7272/admin` and click "Add Vehicle"
-
-**Note:** Free tier only supports **one vehicle**.
-
-**Custom Vehicle Logos (Optional):**
-
-To display your vehicle brand logo:
-
-1. Add a PNG logo to `views/assets/vehicle-logo/`
-2. Name it with the lowercase brand name, replacing spaces with hyphens (e.g., `audi.png`)
-3. Recommended 40x40 pixels or larger, single color
-4. If no matching logo exists, the brand name will display as text
-
 ### LLM (Optional)
 AI-generated daily insights and clothing suggestions, using Anthropic Claude by default (other providers can be added by modifying the `llmService.js` file, but Claude 3.5 Haiku is quite cost-effective at just a few cents per month).
 
@@ -145,14 +118,13 @@ AI-generated daily insights and clothing suggestions, using Anthropic Claude by 
 Visit `http://localhost:7272/admin` to:
 
 - **Authenticate with Google Calendar** - One-click OAuth flow
-- **Connect Smartcar** - Add vehicle via OAuth (free tier: 1 vehicle only)
 - **Monitor service status** - See which APIs are working
 
 OAuth tokens are stored in `data/auth.json` and persist across restarts.
 
 ## Developing
 
-This project is designed to be modular and easy to customize, with each service (weather, calendar, vehicle, etc.) implemented as a separate class that is built to a single data object sent to the dashboard.
+This project is designed to be modular and easy to customize, with each service (weather, calendar, etc.) implemented as a separate class that is built to a single data object sent to the dashboard.
 
 ### Development Commands
 
@@ -161,7 +133,6 @@ This project is designed to be modular and easy to customize, with each service 
 npm run test-service weather   # Visual Crossing API
 npm run test-service ambient   # Ambient Weather Station
 npm run test-service calendar  # Google Calendar
-npm run test-service vehicle   # Smartcar
 npm run test-service llm       # Claude AI
 
 # Process management
@@ -187,7 +158,6 @@ All data services extend `BaseService` (`lib/BaseService.js`) which provides:
 - `weatherApiService.js` - Visual Crossing forecasts (required)
 - `ambientService.js` - Personal weather station (optional)
 - `calendarService.js` - Google Calendar (optional)
-- `vehicleService.js` - Smartcar telemetry (optional)
 - `llmService.js` - Claude AI insights (optional)
 
 ### Modifying Services

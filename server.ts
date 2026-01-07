@@ -1,14 +1,13 @@
-const express = require('express');
-require('dotenv').config();
-const fs = require('fs');
-const { AUTH_PATH } = require('./lib/paths');
-const { applyMiddleware } = require('./lib/middleware');
-const { isAuthed } = require('./services/calendarService');
-const adminRoutes = require('./routes/admin');
-const dashboardRoutes = require('./routes/dashboard');
+import express, { Application, Request, Response, NextFunction } from 'express';
+import dotenv from 'dotenv';
+import { applyMiddleware } from './lib/middleware.js';
+import adminRoutes from './routes/admin.js';
+import dashboardRoutes from './routes/dashboard.js';
 
-const app = express();
-const PORT = process.env.PORT || 7272;
+dotenv.config();
+
+const app: Application = express();
+const PORT = parseInt(process.env.PORT || '7272', 10);
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', './views');
@@ -42,12 +41,12 @@ app.use('/', adminRoutes);
 app.use('/', dashboardRoutes);
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal Server Error',
@@ -60,9 +59,9 @@ app.listen(PORT, '0.0.0.0', () => {
   const baseUrl = `http://localhost:${PORT}`;
   console.log(`Server listening on ${baseUrl}`);
   console.log(`Network access: http://0.0.0.0:${PORT}`);
-  
+
   console.log(`Dashboard page: ${baseUrl}/dashboard`);
   console.log(`Admin page: ${baseUrl}/admin`);
 });
 
-module.exports = app; // For testing
+export default app; // For testing

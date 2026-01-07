@@ -2,7 +2,8 @@
   "name": "home-dashboard",
   "version": "1.0.0",
   "description": "Home dashboard for seeed studio",
-  "main": "server.js",
+  "type": "module",
+  "main": "dist/server.js",
   "author": "Oscar Sims and Kyle Turman",
   "license": "MIT",
   "repository": {
@@ -28,11 +29,15 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "start": "pm2 start ecosystem.config.js",
+    "build": "tsc",
+    "dev": "tsx watch server.ts",
+    "watch": "tsc --watch",
+    "start": "npm run build && pm2 start ecosystem.config.cjs",
     "stop": "pm2 stop weather-dashboard",
-    "restart": "pm2 restart weather-dashboard --update-env",
+    "restart": "npm run build && pm2 restart weather-dashboard --update-env",
     "logs": "pm2 logs weather-dashboard --lines 100",
-    "test-service": "node scripts/test-service.js"
+    "test-service": "npm run build && node dist/scripts/test-service.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "axios": "^1.7.7",
@@ -47,7 +52,16 @@
     "pm2": "^6.0.13",
     "puppeteer": "^24.23.0",
     "sharp": "^0.34.4",
-    "smartcar": "^10.1.0",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/express": "^5.0.6",
+    "@types/helmet": "^0.0.48",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.0.3",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
