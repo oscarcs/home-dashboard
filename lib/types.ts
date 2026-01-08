@@ -49,6 +49,9 @@ export interface WeatherLocation {
   pressure: number;
   wind_speed: number;
   wind_dir: number;
+  uv_index: number;
+  visibility: number;
+  cloud_cover: number;
   forecast?: ForecastDay[];
 }
 
@@ -128,6 +131,9 @@ export interface DashboardData {
   humidity: number;
   pressure: number | null;
   air_quality: AirQualityData;
+  uv_index: number;
+  visibility: number;
+  cloud_cover: number;
   precipitation: PrecipitationData;
   calendar_events: CalendarEvent[];
   clothing_suggestion: string;
@@ -192,6 +198,9 @@ export interface CurrentWeather {
   description: string;
   humidity: number;
   pressure: number | null;
+  uv_index: number;
+  visibility: number;
+  cloud_cover: number;
   wind: WindData;
 }
 

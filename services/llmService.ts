@@ -22,6 +22,9 @@ interface CurrentWeatherForLLM {
   description?: string;
   feels_like?: number;
   humidity?: number;
+  uv_index?: number;
+  visibility?: number;
+  cloud_cover?: number;
 }
 
 interface LocationForLLM {
@@ -40,6 +43,9 @@ interface WeatherContextForPrompt {
   };
   moon?: MoonData;
   air_quality?: AirQualityData;
+  uv_index?: number;
+  visibility?: number;
+  cloud_cover?: number;
 }
 
 interface TimeContext {
@@ -379,6 +385,22 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
     if (current?.feels_like && current?.temp && Math.abs(current.temp - current.feels_like) >= 3) {  // ~5°F
       const delta = current.feels_like - current.temp;
       context.contextNotes.push(`Feels ${delta > 0 ? 'warmer' : 'cooler'} (${Math.abs(Math.round(delta))}° diff)`);
+    }
+
+    // UV Index
+    if (current?.uv_index && current.uv_index >= 6) {
+      context.contextNotes.push(`High UV (${current.uv_index})`);
+    }
+
+    // Visibility
+    if (current?.visibility !== undefined && current.visibility <= 5) {
+      context.contextNotes.push(`Low visibility (${current.visibility}km)`);
+    }
+
+    // Cloud Cover focus
+    if (current?.cloud_cover !== undefined) {
+      if (current.cloud_cover >= 90) context.contextNotes.push('Overcast skies');
+      else if (current.cloud_cover <= 10) context.contextNotes.push('Clear skies');
     }
 
     // Limit to top 5 and join

@@ -30,6 +30,9 @@ interface WeatherData {
   sun: { sunrise: string; sunset: string };
   moon: { phase: string; direction: string; illumination: number | null };
   air_quality: { aqi: number | null; category: string };
+  uv_index: number;
+  visibility: number;
+  cloud_cover: number;
   units: Units;
 }
 
@@ -115,6 +118,9 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     humidity: current.humidity,
     pressure: current.pressure,
     air_quality: weatherData.air_quality,
+    uv_index: weatherData.uv_index,
+    visibility: weatherData.visibility,
+    cloud_cover: weatherData.cloud_cover,
     precipitation,
     calendar_events,
     clothing_suggestion: '',
@@ -320,6 +326,9 @@ function buildCurrentFromWeather(
     pressure: pressure != null ? roundValue(pressure, 0) : null,
     weather_icon: location.icon || 'sunny',
     description: location.condition || 'Clear',
+    uv_index: location.uv_index || 0,
+    visibility: location.visibility || 0,
+    cloud_cover: location.cloud_cover || 0,
     wind: {
       speed: windSpeed != null ? roundValue(windSpeed, 1) : null,
       direction: windDirectionFallback(location.wind_dir),

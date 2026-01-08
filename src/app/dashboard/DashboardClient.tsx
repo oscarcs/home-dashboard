@@ -27,12 +27,14 @@ export default function DashboardClient({
     weather_icon,
     humidity,
     wind,
-    precipitation,
     locations,
     forecast,
     sun,
     moon,
     air_quality,
+    uv_index,
+    visibility,
+    cloud_cover,
     calendar_events,
     daily_summary,
     temp_comparison,
@@ -58,7 +60,7 @@ export default function DashboardClient({
       const container = document.getElementById('forecast-graph');
       const svg = document.getElementById('forecast-svg');
       const columns = container?.querySelectorAll('.forecast-column');
-      
+
       if (!container || !svg || !columns || columns.length === 0) {
         return;
       }
@@ -70,7 +72,7 @@ export default function DashboardClient({
       const topPadding = 24;
       const bottomPadding = 28;
 
-      const temps = Array.from(columns).map(col => 
+      const temps = Array.from(columns).map(col =>
         parseInt((col as HTMLElement).dataset.temp || '0')
       );
       const maxTemp = Math.max(...temps);
@@ -228,10 +230,6 @@ export default function DashboardClient({
   })();
 
   const windSpeedUnit = units?.wind_speed || 'mph';
-  const precipitationUnit = precipitation?.units || 'in';
-  const precipitationSuffix = precipitationUnit === 'mm' ? 'mm' : '"';
-  const formatPrecip = (value: number | null | undefined) =>
-    value === null || typeof value === 'undefined' ? '--' : Number(value).toFixed(2);
   const formatWindSpeed = (value: number | null | undefined) =>
     value === null || typeof value === 'undefined' || Number.isNaN(Number(value)) ? '--' : Number(value).toFixed(1);
 
@@ -397,31 +395,22 @@ export default function DashboardClient({
         <div>
           <div className="weather-stats">
             <div className="stat">
-              <i className="icon ph-bold ph-rainbow-cloud"></i>
+              <i className="icon ph-bold ph-sun"></i>
               <div>
                 <div className="dot-leader">
-                  <span className="label">24h</span>
+                  <span className="label">UV Index</span>
                   <span className="dots"></span>
-                  <span className="value">
-                    {precipitation ? formatPrecip(precipitation.last_24h) : '--'}
-                    {precipitationSuffix}
-                  </span>
+                  <span className="value">{Math.round(uv_index || 0)}</span>
                 </div>
                 <div className="dot-leader">
-                  <span className="label">7d</span>
+                  <span className="label">Visibility</span>
                   <span className="dots"></span>
-                  <span className="value">
-                    {precipitation ? formatPrecip(precipitation.week_total) : '--'}
-                    {precipitationSuffix}
-                  </span>
+                  <span className="value">{Math.round(visibility || 0)}km</span>
                 </div>
                 <div className="dot-leader">
-                  <span className="label">YTD</span>
+                  <span className="label">Clouds</span>
                   <span className="dots"></span>
-                  <span className="value">
-                    {precipitation ? formatPrecip(precipitation.year_total) : '--'}
-                    {precipitationSuffix}
-                  </span>
+                  <span className="value">{Math.round(cloud_cover || 0)}%</span>
                 </div>
               </div>
             </div>

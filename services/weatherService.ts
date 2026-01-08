@@ -72,6 +72,7 @@ interface GoogleCurrentConditions {
   precipitation?: GooglePrecipitation;
   isDaytime?: boolean;
   uvIndex?: number;
+  cloudCover?: number;
   visibility?: {
     value?: number;
     distance?: number;
@@ -157,6 +158,9 @@ interface WeatherDashboardData {
   sun: SunData;
   moon: MoonData;
   air_quality: AirQualityData;
+  uv_index: number;
+  visibility: number;
+  cloud_cover: number;
   precipitation: PrecipitationData;
   units: Units;
 }
@@ -385,6 +389,10 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         wind_speed: windSpeed,
         wind_dir: current.wind?.direction?.degrees || 0,
 
+        uv_index: current.uvIndex || 0,
+        visibility: current.visibility?.distance || current.visibility?.value || 0,
+        cloud_cover: current.cloudCover || 0,
+
         forecast: forecastDays
       };
     });
@@ -444,6 +452,9 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         aqi: null,
         category: 'Not available'
       },
+      uv_index: mainLoc.uv_index,
+      visibility: mainLoc.visibility,
+      cloud_cover: mainLoc.cloud_cover,
       precipitation: {
         last_24h: 0,
         week_total: null,
