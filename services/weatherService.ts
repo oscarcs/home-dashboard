@@ -192,23 +192,8 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
 
   getConfiguredLocations(): string[] {
     const mainLocation = (process.env.MAIN_LOCATION || '').trim();
-    const additionalLocationsRaw = process.env.ADDITIONAL_LOCATIONS || '';
-
-    const parsedAdditional = additionalLocationsRaw
-      .split(/\r?\n|\|/)
-      .map(l => l.trim())
-      .filter(Boolean)
-      .slice(0, 3);
-
-    const locations: string[] = [];
-
-    if (mainLocation) {
-      locations.push(mainLocation);
-    }
-
-    locations.push(...parsedAdditional);
-
-    return Array.from(new Set(locations));
+    if (!mainLocation) return [];
+    return [mainLocation];
   }
 
   async geocodeLocation(apiKey: string, metadata: string): Promise<{ lat: number, lng: number, formattedAddress: string } | null> {

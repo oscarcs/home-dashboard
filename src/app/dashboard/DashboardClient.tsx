@@ -40,6 +40,7 @@ export default function DashboardClient({
     temp_comparison,
     clothing_suggestion,
     units,
+    hourlyForecast,
   } = data;
 
   useEffect(() => {
@@ -380,14 +381,84 @@ export default function DashboardClient({
         </div>
 
         <div className="flex flex-col" style={{ justifyContent: 'space-between' }}>
-          {locations.slice(1, 4).map((location, i) => (
-            <div key={i} className="flex items-center text-label">
-              <div className="flex-1">{location.name}</div>
-              <i className={`ph-bold icon-sm ${getWeatherIcon(location.icon, false)}`} style={{ marginRight: '6px' }}></i>
-              {Math.round(location.current_temp)}
-              {temperatureSymbol}
+          {/* Hourly Precipitation Graph */}
+          <div className="flex flex-col h-full relative">
+            <div className="text-label" style={{ marginBottom: '8px' }}>Chance of Rain (12h)</div>
+
+            {/* Graph Area */}
+            <div className="flex-1 relative flex items-end justify-between" style={{ gap: '2px', borderBottom: '1px solid #000' }}>
+              {/* Grid lines */}
+              {[25, 50, 75].map(tick => (
+                <div
+                  key={tick}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: `${tick}%`,
+                    borderTop: '1px dotted #000',
+                    opacity: 0.3,
+                    zIndex: 0
+                  }}
+                ></div>
+              ))}
+
+              {/* Ensure we always render 12 columns to maintain spacing */}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const hour = hourlyForecast[i];
+                if (!hour) return <div key={i} className="flex-1"></div>;
+
+                const height = Math.max(hour.rain_chance, 0);
+                return (
+                  <div key={i} className="flex flex-col items-center flex-1 z-10 h-full justify-end">
+                    <div
+                      style={{
+                        width: '100%',
+                        height: `${height}%`,
+                        background: '#000',
+                        borderRadius: '1px 1px 0 0',
+                        maxWidth: '12px'
+                      }}
+                      title={`${hour.rain_chance}%`}
+                    ></div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+
+            {/* Labels Row */}
+            <div className="flex justify-between items-start" style={{ height: '20px', marginTop: '6px', gap: '2px' }}>
+              {Array.from({ length: 12 }).map((_, i) => {
+                const hour = hourlyForecast[i];
+                // Only label if we have data AND it's a 3rd hour
+                if (!hour) return <div key={i} className="flex-1 min-w-0"></div>;
+
+                const date = new Date(hour.time);
+                const hourLabel = date.getHours();
+                const ampm = hourLabel >= 12 ? 'pm' : 'am';
+                const displayHour = hourLabel % 12 || 12;
+
+                return (
+                  <div key={i} className="flex-1 min-w-0 text-center" style={{ position: 'relative', overflow: 'visible' }}>
+                    <div
+                      className="text-label-sm"
+                      style={{
+                        fontSize: '10px',
+                        opacity: i % 3 === 0 ? 1 : 0,
+                        whiteSpace: 'nowrap',
+                        // Center perfectly, but allow overflow
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      {displayHour}{ampm}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
