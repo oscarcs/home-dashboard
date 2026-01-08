@@ -36,6 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.7.7",

@@ -85,11 +85,11 @@ Display upcoming calendar events.
 8. Visit `http://localhost:7272/admin` and click "Authenticate"
 
 ### LLM (Optional)
-AI-generated daily insights and clothing suggestions, using Anthropic Claude by default (other providers can be added by modifying `services/llmService.ts`, but Claude 3.5 Haiku is quite cost-effective at just a few cents per month).
+AI-generated daily insights and clothing suggestions, using Google Gemini by default (configured in `services/llmService.ts`). Gemini 1.5 Flash is highly recommended for its speed and low cost.
 
-1. Sign up at [console.anthropic.com](https://console.anthropic.com/)
-2. Navigate to API Keys and generate a new key
-3. Add to `.env`: `ANTHROPIC_API_KEY=your_api_key`
+1. Sign up at [Google AI Studio](https://aistudio.google.com/)
+2. Generate a new API key
+3. Add to `.env`: `GEMINI_API_KEY=your_api_key`
 
 ## Technology Stack
 
@@ -98,7 +98,7 @@ AI-generated daily insights and clothing suggestions, using Anthropic Claude by 
 - **Styling:** CSS + Tailwind CSS (utility classes)
 - **UI Icons:** Phosphor Icons
 - **Image Processing:** Puppeteer + Sharp (for e-paper generation)
-- **APIs:** Google Weather, Google Calendar, Anthropic Claude, Ambient Weather
+- **APIs:** Google Weather, Google Calendar, Google Gemini
 
 ## Admin Panel
 
@@ -149,9 +149,8 @@ lib/                      # Shared utilities
 
 services/                 # Data services
   weatherService.ts       # Google Weather API (required)
-  ambientService.ts       # Personal weather station (optional)
   calendarService.ts      # Google Calendar (optional)
-  llmService.ts           # Claude AI insights (optional)
+  llmService.ts           # Gemini AI insights (optional)
 
 public/                   # Static assets
   styles/                 # CSS files
@@ -173,8 +172,7 @@ All data services extend `BaseService` (`lib/BaseService.ts`) which provides:
 2. **Implement required methods:** `fetchData()` and `isEnabled()`
 3. **Add type definitions:** Update `lib/types.ts`
 4. **Integrate data:** Add service call in `lib/dataBuilder.ts`
-5. **Test it:** Add to `scripts/test-service.ts`
-6. **Update UI:** Modify React components to display the data
+5. **Update UI:** Modify React components to display the data
 
 ### Modifying the Dashboard UI
 

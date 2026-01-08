@@ -1,6 +1,5 @@
 // @ts-nocheck - Services are not yet converted to TypeScript
 import { WeatherService } from '../services/weatherService';
-import { AmbientService } from '../services/ambientService';
 import { LLMService } from '../services/llmService';
 import { CalendarService } from '../services/calendarService';
 import { getStateKey, setStateKey } from './state';
@@ -15,24 +14,12 @@ import type {
   CurrentWeather,
   WindData,
   PrecipitationData,
-  AmbientPrecipitationData,
   CalendarEvent,
   ServiceStatus,
   Units,
   LLMInsights,
 } from './types';
 
-interface AmbientData {
-  current_temp?: number | null;
-  feels_like?: number | null;
-  humidity?: number | null;
-  pressure?: number | null;
-  wind?: {
-    speed?: number | null;
-    direction?: string;
-  };
-  precipitation?: AmbientPrecipitationData;
-}
 
 interface WeatherData {
   locations: WeatherLocation[];
@@ -60,7 +47,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 
   // Initialize all services (each service defines its own cache TTL)
   const weatherService = new WeatherService();
-  const ambientService = new AmbientService();
   const llmService = new LLMService();
   const calendarService = new CalendarService();
 
@@ -77,32 +63,17 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     throw new Error(`Weather API unavailable: ${err.message}`);
   }
 
-  // Fetch ambient data (OPTIONAL - overrides weather current conditions)
-  let ambientData: AmbientData | null = null;
-  let ambientStatus: ServiceStatus;
-  try {
-    const result = await ambientService.getData({}, logger);
-    ambientData = result.data;
-    ambientStatus = result.status;
-  } catch (error) {
-    const err = error as Error;
-    logger.info?.('[DataBuilder] Ambient service unavailable (optional):', err.message);
-    ambientStatus = ambientService.getStatus();
-  }
 
   // Build current conditions
-  // Use ambient sensor data if available, otherwise fall back to Visual Crossing
   // Always use WeatherAPI for condition/icon
   const mainLocation = weatherData.locations[0] || {};
 
   const fallbackWindDirection = (dir: number): string => getWindDirection(dir || 0);
 
-  const current = ambientData
-    ? buildCurrentFromAmbient(ambientData, mainLocation, fallbackWindDirection)
-    : buildCurrentFromWeather(mainLocation, fallbackWindDirection);
+  const current = buildCurrentFromWeather(mainLocation, fallbackWindDirection);
 
-  // Use Ambient precipitation if available, otherwise WeatherAPI
-  const precipitation = normalizePrecipitationData(ambientData?.precipitation, weatherData.precipitation);
+  // Use WeatherAPI for precipitation
+  const precipitation = normalizePrecipitationData(weatherData.precipitation);
 
   // Fetch calendar (OPTIONAL)
   let calendar_events: CalendarEvent[] = [];
@@ -204,7 +175,7 @@ export async function buildDashboardData(req: { headers: Record<string, string |
         usedCache = true;
         logger.info?.('[DataBuilder] Using stale LLM cache');
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // If no cache available, use static description fallback
     if (!usedCache) {
@@ -224,7 +195,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
   // Attach service statuses for admin panel
   data._serviceStatuses = {
     weather: weatherStatus,
-    ambient: ambientStatus,
     llm: llmStatus,
     calendar: calendarStatus,
   };
@@ -240,14 +210,12 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 export function getServiceStatuses(): Record<string, ServiceStatus> {
   // Instantiate services to get their TTL values
   const weatherService = new WeatherService();
-  const ambientService = new AmbientService();
   const llmService = new LLMService();
   const calendarService = new CalendarService();
 
   // Service definitions
   const serviceConfigs: Record<string, { service: any }> = {
     weather: { service: weatherService },
-    ambient: { service: ambientService },
     llm: { service: llmService },
     calendar: { service: calendarService },
   };
@@ -335,30 +303,6 @@ function computeTempComparison(todayHigh: number | undefined): string | null {
   }
 }
 
-function buildCurrentFromAmbient(
-  ambient: AmbientData,
-  mainLocation: WeatherLocation,
-  windDirectionFallback: (dir: number) => string
-): CurrentWeather {
-  const temp = ambient.current_temp ?? 0;
-  const feels = ambient.feels_like ?? temp;
-  const pressure = ambient.pressure ?? null;
-  const windSpeed = ambient.wind?.speed ?? null;
-  const windDirection = ambient.wind?.direction || windDirectionFallback(mainLocation.wind_dir);
-
-  return {
-    temp: roundValue(temp),
-    feels_like: roundValue(feels),
-    humidity: ambient.humidity ?? mainLocation.humidity ?? 0,
-    pressure: pressure != null ? roundValue(pressure, 0) : null,
-    weather_icon: mainLocation.icon || 'sunny',
-    description: mainLocation.condition || 'Clear',
-    wind: {
-      speed: windSpeed != null ? roundValue(windSpeed, 1) : null,
-      direction: windDirection,
-    },
-  };
-}
 
 function buildCurrentFromWeather(
   location: WeatherLocation,
@@ -384,10 +328,9 @@ function buildCurrentFromWeather(
 }
 
 function normalizePrecipitationData(
-  ambientPrecip: AmbientPrecipitationData | undefined,
   weatherPrecip: PrecipitationData | undefined
 ): PrecipitationData {
-  const source = ambientPrecip || weatherPrecip || {};
+  const source = weatherPrecip || {};
 
   const formatValue = (value: number | null): number | null => (value == null ? null : Number(value.toFixed(2)));
 

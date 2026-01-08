@@ -1,4 +1,5 @@
 import { BaseService } from '../lib/BaseService';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type {
   Logger,
   HourlyForecast,
@@ -13,6 +14,7 @@ import type {
 
 interface LLMServiceConfig {
   baseUrl?: string;
+  input?: WeatherContextForPrompt;
 }
 
 interface CurrentWeatherForLLM {
@@ -98,7 +100,7 @@ interface CostInfo {
 
 /**
  * LLM Service (AI Insights) - OPTIONAL
- * Currently supports Anthropic Claude, but designed to be provider-agnostic
+ * Uses Google Gemini to generate weather-based insights
  */
 class LLMService extends BaseService<LLMInsights, LLMServiceConfig> {
   constructor(cacheTTLMinutes: number = 90) {
@@ -112,14 +114,57 @@ class LLMService extends BaseService<LLMInsights, LLMServiceConfig> {
   }
 
   isEnabled(): boolean {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     return !!apiKey;
   }
 
-  async fetchData(_config: LLMServiceConfig, _logger: Logger): Promise<LLMInsights> {
-    // This method would be implemented to call the LLM API
-    // For now, we return empty data as the implementation depends on external API
-    throw new Error('fetchData must be implemented with LLM API call');
+  async fetchData(config: LLMServiceConfig, _logger: Logger): Promise<LLMInsights> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+    if (!config.input) {
+      throw new Error('LLM service requires weather context input');
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
+
+    const { systemPrompt, userMessage } = this.buildPrompt(config.input);
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
+    });
+
+    const response = await result.response;
+    const text = response.text();
+
+    try {
+      const parsed = JSON.parse(text);
+
+      // Cost calculation for Gemini 2 Flash (approximate)
+      // $0.1 per 1M tokens input, $0.4 per 1M tokens output
+      const inputTokens = response.usageMetadata?.promptTokenCount || 0;
+      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
+      const cost = (inputTokens * 0.1 / 1000000) + (outputTokens * 0.4 / 1000000);
+
+      return {
+        clothing_suggestion: parsed.clothing_suggestion || "No suggestion available",
+        daily_summary: parsed.daily_summary || "No summary available",
+        _meta: {
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cost_usd: cost,
+          prompt: userMessage,
+        }
+      };
+    } catch (e) {
+      throw new Error(`Failed to parse Gemini response as JSON: ${text}`);
+    }
   }
 
   mapToDashboard(apiData: LLMInsights, _config: LLMServiceConfig): LLMInsights {

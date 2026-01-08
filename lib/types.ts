@@ -137,7 +137,6 @@ export interface DashboardData {
   units: Units;
   _serviceStatuses?: {
     weather: ServiceStatus;
-    ambient: ServiceStatus;
     llm: ServiceStatus;
     calendar: ServiceStatus;
   };
@@ -205,16 +204,6 @@ export interface LLMInsights {
   daily_summary: string;
 }
 
-// ----------------------------------------------------------------------------
-// Ambient Service Types
-// ----------------------------------------------------------------------------
-
-export interface AmbientPrecipitationData {
-  last_24h?: number | null;
-  week_total?: number | null;
-  month_total?: number | null;
-  year_total?: number | null;
-}
 
 // ----------------------------------------------------------------------------
 // State Management Types

@@ -19,7 +19,10 @@ import type {
 
 interface GoogleWeatherCondition {
   type: string;
-  description?: string;
+  description?: {
+    text: string;
+    languageCode: string;
+  };
   iconBaseUri?: string;
 }
 
@@ -49,13 +52,13 @@ interface GooglePrecipitation {
     type: string;
   };
   qpf?: {
-    value: number;
+    value?: number;
+    quantity?: number;
     unit: string;
   };
 }
 
 interface GoogleCurrentConditions {
-  name?: string; // Resource name
   currentTime: string;
   timeZone: {
     id: string;
@@ -70,47 +73,47 @@ interface GoogleCurrentConditions {
   isDaytime?: boolean;
   uvIndex?: number;
   visibility?: {
-    value: number;
+    value?: number;
+    distance?: number;
     unit: string;
   };
   airPressure?: {
-    value: number;
-    unit: string;
+    value?: number;
+    meanSeaLevelMillibars?: number;
+    unit?: string;
   };
 }
 
 interface GoogleForecastDay {
-  forecastDate: {
+  displayDate: {
     year: number;
     month: number;
     day: number;
   };
-  weatherCondition: GoogleWeatherCondition;
+  daytimeForecast?: {
+    weatherCondition: GoogleWeatherCondition;
+    precipitation?: GooglePrecipitation;
+  };
   maxTemperature: GoogleTemperature;
   minTemperature: GoogleTemperature;
   maxFeelsLikeTemperature?: GoogleTemperature;
   minFeelsLikeTemperature?: GoogleTemperature;
-  relativeHumidity?: {
-    maxPercent?: number;
-    minPercent?: number;
-    averagePercent?: number;
+  sunEvents?: {
+    sunriseTime?: string;
+    sunsetTime?: string;
   };
-  precipitation?: GooglePrecipitation;
-  wind?: GoogleWind;
-  sunriseTime?: string;
-  sunsetTime?: string;
-  moonriseTime?: string;
-  moonsetTime?: string;
-  moonPhase?: {
-    phase: string;
+  moonEvents?: {
+    moonPhase?: string;
   }
-  uvIndex?: {
-    max?: number;
-  };
 }
 
 interface GoogleForecastHour {
-  forecastTime: string;
+  displayDateTime: {
+    year: number;
+    month: number;
+    day: number;
+    hours: number;
+  };
   weatherCondition: GoogleWeatherCondition;
   temperature: GoogleTemperature;
   feelsLikeTemperature: GoogleTemperature;
@@ -121,11 +124,11 @@ interface GoogleForecastHour {
 }
 
 interface GoogleDailyResponse {
-  dailyForecasts: GoogleForecastDay[];
+  forecastDays: GoogleForecastDay[];
 }
 
 interface GoogleHourlyResponse {
-  hourlyForecasts: GoogleForecastHour[];
+  forecastHours: GoogleForecastHour[];
 }
 
 interface FullWeatherData {
@@ -209,7 +212,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       // Use Google Maps Geocoding API
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(metadata)}&key=${apiKey}`;
       const resp = await axios.get(url, { timeout: 10000 });
-      
+
       if (resp.data.status === 'OK' && resp.data.results && resp.data.results.length > 0) {
         const result = resp.data.results[0];
         return {
@@ -234,7 +237,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
 
     // 2. Fetch Weather Data (Metric defaults)
     const baseUrl = 'https://weather.googleapis.com/v1';
-    
+
     // We need to fetch 3 endpoints concurrently
     const currentUrl = `${baseUrl}/currentConditions:lookup?key=${apiKey}&location.latitude=${geo.lat}&location.longitude=${geo.lng}`;
     const dailyUrl = `${baseUrl}/forecast/days:lookup?key=${apiKey}&location.latitude=${geo.lat}&location.longitude=${geo.lng}&days=7`;
@@ -322,33 +325,33 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       // Current processing
       const curTemp = normalizeTemp(current.temperature?.degrees ?? 0, current.temperature?.unit);
       const curFeels = normalizeTemp(current.feelsLikeTemperature?.degrees ?? 0, current.feelsLikeTemperature?.unit);
-      
+
       // Wind
       const windSpeedVal = current.wind?.speed?.value || 0;
       const windUnit = current.wind?.speed?.unit || 'KILOMETERS_PER_HOUR';
       const windSpeed = normalizeSpeed(windSpeedVal, windUnit);
 
       // Pressure
-      const pressureVal = current.airPressure?.value || 1013; // hPa
+      const pressureVal = current.airPressure?.meanSeaLevelMillibars || current.airPressure?.value || 1013; // hPa
       const pressure = pressureVal;
 
       // Condition mapping
-      const conditionType = String(current.weatherCondition?.description || current.weatherCondition?.type || 'unknown');
+      const conditionType = String(current.weatherCondition?.description?.text || current.weatherCondition?.type || 'unknown');
       const { icon: conditionIcon, description: conditionDesc } = mapIconAndDescription(conditionType);
 
       // Forecast Maps
-      const dailyForecasts = daily.dailyForecasts || [];
+      const dailyForecasts = daily.forecastDays || [];
       const forecastDays: ForecastDay[] = dailyForecasts.map(d => {
         const high = normalizeTemp(d.maxTemperature?.degrees ?? 0, d.maxTemperature?.unit);
         const low = normalizeTemp(d.minTemperature?.degrees ?? 0, d.minTemperature?.unit);
-        const dateStr = formatDate(d.forecastDate);
-        
+        const dateStr = formatDate(d.displayDate);
+
         // Precip
-        const precipProb = d.precipitation?.probability?.percent || 0;
-        
-        const dayConditionType = String(d.weatherCondition?.description || d.weatherCondition?.type || 'unknown');
+        const precipProb = d.daytimeForecast?.precipitation?.probability?.percent || 0;
+
+        const dayConditionType = String(d.daytimeForecast?.weatherCondition?.description?.text || d.daytimeForecast?.weatherCondition?.type || 'unknown');
         const { icon } = mapIconAndDescription(dayConditionType);
-        
+
         return {
           date: dateStr,
           day: getDayOfWeek(dateStr),
@@ -365,23 +368,23 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         region: resolvedAddress || '',
         country: '',
         query: locData.location,
-        
+
         current_temp: curTemp,
         feels_like: curFeels,
-        
+
         high: forecastDays[0]?.high || 0,
         low: forecastDays[0]?.low || 0,
 
         icon: conditionIcon,
         condition: conditionDesc || conditionType,
-        
+
         rain_chance: current.precipitation?.probability?.percent || 0,
         humidity: current.relativeHumidity || 0,
-        
+
         pressure,
         wind_speed: windSpeed,
         wind_dir: current.wind?.direction?.degrees || 0,
-        
+
         forecast: forecastDays
       };
     });
@@ -391,64 +394,69 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
 
     // Hourly Forecast for main location
     // Limit to next 24 hours
-    const hourlyForecasts = mainApiData.hourly?.hourlyForecasts || [];
+    const hourlyForecasts = mainApiData.hourly?.forecastHours || [];
     const next24 = hourlyForecasts.slice(0, 24).map(h => {
-        const t = normalizeTemp(h.temperature?.degrees ?? 0, h.temperature?.unit);
-        const { icon } = mapIconAndDescription(h.weatherCondition?.description || h.weatherCondition?.type);
-        const wSpeed = h.wind?.speed?.value || 0;
-        const wUnit = h.wind?.speed?.unit || 'KILOMETERS_PER_HOUR';
-        const windSpeed = normalizeSpeed(wSpeed, wUnit);
+      const t = normalizeTemp(h.temperature?.degrees ?? 0, h.temperature?.unit);
+      const { icon } = mapIconAndDescription(h.weatherCondition?.description?.text || h.weatherCondition?.type);
+      const wSpeed = h.wind?.speed?.value || 0;
+      const wUnit = h.wind?.speed?.unit || 'KILOMETERS_PER_HOUR';
+      const windSpeed = normalizeSpeed(wSpeed, wUnit);
 
-        const isoTime = h.forecastTime; 
-        
-        return {
-            time: isoTime,
-            temp: t,
-            condition: h.weatherCondition?.description || h.weatherCondition?.type || '',
-            icon,
-            rain_chance: h.precipitation?.probability?.percent || 0,
-            wind_speed: windSpeed,
-        };
+      const isoTime = new Date(
+        h.displayDateTime.year,
+        h.displayDateTime.month - 1,
+        h.displayDateTime.day,
+        h.displayDateTime.hours
+      ).toISOString();
+
+      return {
+        time: isoTime,
+        temp: t,
+        condition: h.weatherCondition?.description?.text || h.weatherCondition?.type || '',
+        icon,
+        rain_chance: h.precipitation?.probability?.percent || 0,
+        wind_speed: windSpeed,
+      };
     });
 
     // Sun data from Daily forecast (Day 0)
-    const today = mainApiData.daily?.dailyForecasts?.[0];
+    const today = mainApiData.daily?.forecastDays?.[0];
     const sunData: SunData = {
-        sunrise: today?.sunriseTime ? new Date(today.sunriseTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--',
-        sunset: today?.sunsetTime ? new Date(today.sunsetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'
+      sunrise: today?.sunEvents?.sunriseTime ? new Date(today.sunEvents.sunriseTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+      sunset: today?.sunEvents?.sunsetTime ? new Date(today.sunEvents.sunsetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'
     };
-    
+
     // Moon
     const moonData: MoonData = {
-        phase: today?.moonPhase?.phase || 'unknown',
-        direction: 'unknown',
-        illumination: 0
+      phase: today?.moonEvents?.moonPhase || 'unknown',
+      direction: 'unknown',
+      illumination: 0
     };
 
     return {
-        locations: mappedLocations,
-        forecast: mainLoc.forecast || [],
-        hourlyForecast: next24,
-        timezone: locationTimezone,
-        sun: sunData,
-        moon: moonData,
-        air_quality: {
-            aqi: null,
-            category: 'Not available'
-        },
-        precipitation: {
-            last_24h: 0,
-            week_total: null,
-            month_total: null,
-            year_total: null,
-            units: 'mm'
-        },
-        units: {
-            temperature: '°C',
-            wind_speed: 'km/h',
-            precipitation: 'mm',
-            pressure: 'hPa'
-        }
+      locations: mappedLocations,
+      forecast: mainLoc.forecast || [],
+      hourlyForecast: next24,
+      timezone: locationTimezone,
+      sun: sunData,
+      moon: moonData,
+      air_quality: {
+        aqi: null,
+        category: 'Not available'
+      },
+      precipitation: {
+        last_24h: 0,
+        week_total: null,
+        month_total: null,
+        year_total: null,
+        units: 'mm'
+      },
+      units: {
+        temperature: '°C',
+        wind_speed: 'km/h',
+        precipitation: 'mm',
+        pressure: 'hPa'
+      }
     };
   }
 }
