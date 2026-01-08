@@ -57,6 +57,47 @@ The server runs on **port 7272** by default.
 - Dashboard data JSON: `http://localhost:7272/api/dashboard`
 - Services status: `http://localhost:7272/api/services/status`
 
+## Production Deployment
+
+### Ubuntu Server with systemd
+
+Install Puppeteer dependencies:
+```bash
+sudo apt-get install -y ca-certificates fonts-liberation libasound2t64 \
+  libatk-bridge2.0-0t64 libatk1.0-0t64 libcairo2 libcups2t64 libdbus-1-3 \
+  libexpat1 libfontconfig1 libgbm1 libgcc-s1 libglib2.0-0t64 libgtk-3-0t64 \
+  libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libx11-6 libx11-xcb1 \
+  libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 \
+  libxrandr2 libxrender1 libxss1 libxtst6 xdg-utils
+```
+
+Create systemd service at `/etc/systemd/system/home-dashboard.service`:
+```ini
+[Unit]
+Description=Home Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+WorkingDirectory=/path/to/home-dashboard
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now home-dashboard
+```
+
+View logs: `sudo journalctl -u home-dashboard -f`
+
 ## API Keys & Provider Setup
 
 ### Google Weather API (Required)
