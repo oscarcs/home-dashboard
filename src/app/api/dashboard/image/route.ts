@@ -104,7 +104,8 @@ export async function GET(request: NextRequest) {
     return new NextResponse(Buffer.from(processedImage), {
       headers: {
         'Content-Type': 'image/png',
-        'Content-Disposition': 'attachment; filename="dashboard.png"'
+        'Content-Disposition': 'attachment; filename="dashboard.png"',
+        'Content-Length': processedImage.length.toString()
       }
     });
   } catch (error) {
