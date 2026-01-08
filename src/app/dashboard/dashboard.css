@@ -20,7 +20,7 @@ body {
   padding: 20px;
   overflow: hidden;
   position: relative;
-  
+
   /* Use font smoothing controls */
   -webkit-font-smoothing: antialiased;
 }
@@ -137,15 +137,15 @@ body {
   height: 112px;
 }
 
-.main-weather > *:not(:first-child) {
+.main-weather>*:not(:first-child) {
   border-left: 1px #000 solid;
 }
 
-.main-weather > * {
+.main-weather>* {
   padding: 20px;
 }
 
-.main-weather > :last-child {
+.main-weather> :last-child {
   padding-left: 22px;
   padding-right: 16px;
 }
@@ -195,13 +195,13 @@ body {
   padding-left: 12px;
 }
 
-.weather-stats > :first-child {
+.weather-stats> :first-child {
   grid-row: span 2;
   width: 208px;
   min-width: 0;
 }
 
-.weather-stats > :first-child > div {
+.weather-stats> :first-child>div {
   flex: 1;
   min-width: 0;
   padding-right: 12px;
@@ -219,7 +219,7 @@ body {
 /* Dot leader layout */
 .dot-leader {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   overflow: hidden;
 }
 
@@ -278,6 +278,7 @@ body {
 .calendar-event strong {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;

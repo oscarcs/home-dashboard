@@ -40,6 +40,7 @@ interface Thresholds {
   coldNight: number;
   warmNight: number;
   hotNight: number;
+  extremeHeat: number;
   bigSwing: number;
   largeWarmup: number;
   largeDrop: number;
@@ -296,7 +297,11 @@ function buildMorningSummary({ currentTemp, highTemp, condition, isRainy, hasBig
     }
   } else if (isWarm) {
     clothing = "Light layers, shorts weather";
-    summary = "Warm start to a beautiful day, staying sunny and pleasant throughout";
+    if (highTemp >= thresholds.extremeHeat) {
+      summary = "Extreme heat warning today, temperatures soaring to dangerous levels";
+    } else {
+      summary = "Warm start to a beautiful day, staying sunny and pleasant throughout";
+    }
   } else {
     clothing = "Light jacket for morning";
     if (/cloud/.test(condition)) {
@@ -322,7 +327,11 @@ function buildAfternoonSummary({ currentTemp, condition, isRainy, thresholds }: 
     summary = "Rainy afternoon continuing into evening, staying wet and overcast";
   } else if (isHot) {
     clothing = "Light breathable clothes";
-    summary = "Hot afternoon continuing, staying warm as we head into the evening";
+    if (currentTemp >= thresholds.extremeHeat) {
+      summary = "Extreme heat alert this afternoon, stay hydrated and keep in the shade";
+    } else {
+      summary = "Hot afternoon continuing, staying warm as we head into the evening";
+    }
   } else if (isWarm) {
     clothing = "Light layers for evening";
     if (/clear|sunny/.test(condition)) {
@@ -394,7 +403,11 @@ function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thre
     }
   } else if (willBeHot) {
     clothing = "Light clothes for tomorrow";
-    summary = "Tomorrow heating up nicely, expect warm sunny skies and hot temperatures";
+    if (tomorrowHigh >= thresholds.extremeHeat) {
+      summary = "Dangerously hot tomorrow, prepare for extreme heat and stay inside";
+    } else {
+      summary = "Tomorrow heating up nicely, expect warm sunny skies and hot temperatures";
+    }
   } else if (willBeWarm) {
     clothing = "Comfortable layers for tomorrow";
     if (/fog|mist/.test(condition)) {
@@ -424,10 +437,11 @@ function deriveThresholds(): Thresholds {
     warmAfternoon: 21,
     hotAfternoon: 29,
     coolAfternoon: 15,
-    coolEvening: 15, 
+    coolEvening: 15,
     coldNight: 10,
     warmNight: 21,
     hotNight: 29,
+    extremeHeat: 38,
     bigSwing: 8,
     largeWarmup: 7,
     largeDrop: 6,

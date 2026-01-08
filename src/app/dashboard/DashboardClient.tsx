@@ -395,19 +395,21 @@ export default function DashboardClient({
         <div>
           <div className="weather-stats">
             <div className="stat">
-              <i className="icon ph-bold ph-sun"></i>
-              <div>
+              <div className="flex-1">
                 <div className="dot-leader">
+                  <i className="ph-bold ph-sun icon-sm" style={{ marginRight: '6px' }}></i>
                   <span className="label">UV Index</span>
                   <span className="dots"></span>
                   <span className="value">{Math.round(uv_index || 0)}</span>
                 </div>
                 <div className="dot-leader">
+                  <i className="ph-bold ph-eye icon-sm" style={{ marginRight: '6px' }}></i>
                   <span className="label">Visibility</span>
                   <span className="dots"></span>
                   <span className="value">{Math.round(visibility || 0)}km</span>
                 </div>
                 <div className="dot-leader">
+                  <i className="ph-bold ph-cloud icon-sm" style={{ marginRight: '6px' }}></i>
                   <span className="label">Clouds</span>
                   <span className="dots"></span>
                   <span className="value">{Math.round(cloud_cover || 0)}%</span>
