@@ -288,8 +288,8 @@ function computeTempComparison(todayHigh: number | undefined): string | null {
   const diff = Number(todayHigh) - Number(yesterdayHigh);
 
   // Determine comparison based on temperature difference (Celsius)
-  const threshold = 0.5;
-  const strongThreshold = 5.5; // ~10°F in Celsius
+  const threshold = 1;
+  const strongThreshold = 6;
   if (Math.abs(diff) < threshold) {
     return 'Same as yesterday';
   } else if (diff >= strongThreshold) {
@@ -302,7 +302,6 @@ function computeTempComparison(todayHigh: number | undefined): string | null {
     return 'Cooler than yesterday';
   }
 }
-
 
 function buildCurrentFromWeather(
   location: WeatherLocation,
