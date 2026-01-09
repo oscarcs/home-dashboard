@@ -126,7 +126,7 @@ Display upcoming calendar events.
 8. Visit `http://localhost:7272/admin` and click "Authenticate"
 
 ### LLM (Optional)
-AI-generated daily insights and clothing suggestions, using Google Gemini by default (configured in `services/llmService.ts`). Gemini 1.5 Flash is highly recommended for its speed and low cost.
+AI-generated insights, using Google Gemini by default (configured in `services/llmService.ts`).
 
 1. Sign up at [Google AI Studio](https://aistudio.google.com/)
 2. Generate a new API key

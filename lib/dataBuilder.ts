@@ -78,7 +78,7 @@ export async function buildDashboardData(req: { headers: Record<string, string |
   // Use WeatherAPI for precipitation
   const precipitation = normalizePrecipitationData(weatherData.precipitation);
 
-  // Fetch calendar (OPTIONAL)
+  // Fetch calendar (optional)
   let calendar_events: CalendarEvent[] = [];
   let calendarStatus: ServiceStatus;
   try {
@@ -123,13 +123,12 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     cloud_cover: weatherData.cloud_cover,
     precipitation,
     calendar_events,
-    clothing_suggestion: '',
     daily_summary: '',
     last_updated: formatTime(now),
     units: weatherData.units,
   };
 
-  // Fetch LLM insights (OPTIONAL - enriches clothing suggestion and adds daily summary)
+  // Fetch LLM insights (optional)
   let llmStatus: ServiceStatus;
   let hasValidInsights = false;
 
@@ -154,7 +153,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 
     // Check if we got valid insights from LLM
     if (insights && insights.daily_summary && insights.daily_summary.trim().length > 0) {
-      data.clothing_suggestion = insights.clothing_suggestion;
       data.daily_summary = insights.daily_summary.trim();
       data.llm_source = result.source;
       hasValidInsights = true;
@@ -174,9 +172,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
       const staleCache = llmService.getCache(true) as LLMInsights | null; // true = allow stale
       if (staleCache && staleCache.daily_summary) {
         data.daily_summary = staleCache.daily_summary.trim();
-        if (staleCache.clothing_suggestion) {
-          data.clothing_suggestion = staleCache.clothing_suggestion.trim();
-        }
         data.llm_source = 'stale_cache';
         usedCache = true;
         logger.info?.('[DataBuilder] Using stale LLM cache');
@@ -192,7 +187,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
         hourlyForecast: data.hourlyForecast,
         units: data.units,
       });
-      data.clothing_suggestion = staticDescription.clothing_suggestion;
       data.daily_summary = staticDescription.daily_summary;
       data.llm_source = 'static_fallback';
     }

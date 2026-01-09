@@ -38,7 +38,6 @@ export default function DashboardClient({
     calendar_events,
     daily_summary,
     temp_comparison,
-    clothing_suggestion,
     units,
     hourlyForecast,
   } = data;
@@ -334,18 +333,12 @@ export default function DashboardClient({
           <h1 className="weather-summary text-title" style={{ marginTop: '8px' }}>
             {daily_summary && daily_summary.trim().length > 0 ? daily_summary : weather_description}
           </h1>
-          {clothing_suggestion && (
-            <div className="clothing-pill text-sm">
-              <i className="icon-sm ph-fill ph-t-shirt"></i>
-              {clothing_suggestion}
-            </div>
-          )}
         </div>
       </div>
 
       <div className="main-weather">
         <div className="flex flex-col" style={{ textAlign: 'center' }}>
-          <div className="text-label">{locations[0].name} Today</div>
+          <div className="text-label">TODAY</div>
           <div className="flex flex-col flex-1" style={{ justifyContent: 'center', gap: '12px', paddingTop: '4px' }}>
             <div className="text-lg flex" style={{ marginLeft: '-8px', gap: '2px', alignItems: 'baseline', justifyContent: 'center' }}>
               {Math.round(locations[0].high)}

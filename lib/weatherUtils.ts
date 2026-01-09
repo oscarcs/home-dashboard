@@ -85,11 +85,9 @@ interface NightSummaryParams {
 
 interface SummaryResult {
   summary: string;
-  clothing: string;
 }
 
 interface StaticDescription {
-  clothing_suggestion: string;
   daily_summary: string;
 }
 
@@ -171,7 +169,6 @@ export function getWindDirection(degrees: number): string {
  * Generates time-aware descriptions with similar vibe to LLM service
  *
  * @param weatherData - Weather data object
- * @returns Object with clothing_suggestion and daily_summary
  */
 export function buildStaticDescription(weatherData: WeatherDataForStatic): StaticDescription {
   const hour = new Date().getHours();
@@ -206,10 +203,9 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
   const hasBigSwing = tempRange >= thresholds.bigSwing;
 
   let summary: string;
-  let clothing: string;
 
   if (timeContext.period === 'morning') {
-    ({ summary, clothing } = buildMorningSummary({
+    ({ summary } = buildMorningSummary({
       currentTemp,
       highTemp,
       lowTemp,
@@ -220,7 +216,7 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
       thresholds,
     }));
   } else if (timeContext.period === 'afternoon') {
-    ({ summary, clothing } = buildAfternoonSummary({
+    ({ summary } = buildAfternoonSummary({
       currentTemp,
       highTemp,
       lowTemp,
@@ -229,7 +225,7 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
       thresholds,
     }));
   } else if (timeContext.period === 'evening') {
-    ({ summary, clothing } = buildEveningSummary({
+    ({ summary } = buildEveningSummary({
       currentTemp,
       lowTemp,
       condition,
@@ -239,7 +235,7 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
   } else {
     const tomorrowHigh = tomorrowForecast.high ?? 20;
     const tomorrowLow = tomorrowForecast.low ?? 15;
-    ({ summary, clothing } = buildNightSummary({
+    ({ summary } = buildNightSummary({
       tomorrowHigh,
       tomorrowLow,
       condition,
@@ -249,7 +245,6 @@ export function buildStaticDescription(weatherData: WeatherDataForStatic): Stati
   }
 
   return {
-    clothing_suggestion: clothing,
     daily_summary: summary,
   };
 }
@@ -272,38 +267,32 @@ function buildMorningSummary({ currentTemp, highTemp, condition, isRainy, hasBig
   const willWarmUp = highTemp - currentTemp >= thresholds.largeWarmup;
 
   let summary: string;
-  let clothing: string;
 
   if (isRainy) {
-    clothing = "Rain gear and warm layers";
     if (isCold) {
       summary = "Chilly and rainy morning, staying wet and cool throughout the day";
     } else {
       summary = "Rainy start continuing through the day, stay dry and cozy inside";
     }
   } else if (hasBigSwing && willWarmUp) {
-    clothing = "Layers you can shed later";
     if (/fog|mist/.test(condition)) {
       summary = "Cool and foggy this morning, clearing to warmer skies by afternoon";
     } else {
       summary = `Cool start warming up fast, pleasant ${Math.round(tempRange)}° swing by afternoon`;
     }
   } else if (isCold) {
-    clothing = "Warm jacket and layers";
     if (/cloud|overcast/.test(condition)) {
       summary = "Chilly and cloudy morning, staying fairly cool throughout the day";
     } else {
       summary = "Crisp cool morning, staying on the cooler side all day long";
     }
   } else if (isWarm) {
-    clothing = "Light layers, shorts weather";
     if (highTemp >= thresholds.extremeHeat) {
       summary = "Extreme heat warning today, temperatures soaring to dangerous levels";
     } else {
       summary = "Warm start to a beautiful day, staying sunny and pleasant throughout";
     }
   } else {
-    clothing = "Light jacket for morning";
     if (/cloud/.test(condition)) {
       summary = "Mild and cloudy morning, comfortable temperatures all day long";
     } else {
@@ -311,7 +300,7 @@ function buildMorningSummary({ currentTemp, highTemp, condition, isRainy, hasBig
     }
   }
 
-  return { summary, clothing };
+  return { summary };
 }
 
 function buildAfternoonSummary({ currentTemp, condition, isRainy, thresholds }: AfternoonSummaryParams): SummaryResult {
@@ -320,34 +309,28 @@ function buildAfternoonSummary({ currentTemp, condition, isRainy, thresholds }: 
   const isCool = currentTemp < thresholds.coolAfternoon;
 
   let summary: string;
-  let clothing: string;
 
   if (isRainy) {
-    clothing = "Umbrella and light jacket";
     summary = "Rainy afternoon continuing into evening, staying wet and overcast";
   } else if (isHot) {
-    clothing = "Light breathable clothes";
     if (currentTemp >= thresholds.extremeHeat) {
       summary = "Extreme heat alert this afternoon, stay hydrated and keep in the shade";
     } else {
       summary = "Hot afternoon continuing, staying warm as we head into the evening";
     }
   } else if (isWarm) {
-    clothing = "Light layers for evening";
     if (/clear|sunny/.test(condition)) {
       summary = "Beautiful sunny afternoon, staying pleasant as the day winds down";
     } else {
       summary = "Mild and comfortable afternoon, nice conditions into the evening";
     }
   } else if (isCool) {
-    clothing = "Sweater for the rest of day";
     summary = "Cool and comfortable afternoon, staying on the cooler side tonight";
   } else {
-    clothing = "Light jacket for evening";
     summary = "Pleasant afternoon temperatures, comfortable conditions into evening";
   }
 
-  return { summary, clothing };
+  return { summary };
 }
 
 function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresholds }: EveningSummaryParams): SummaryResult {
@@ -355,27 +338,22 @@ function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresho
   const willCoolDown = currentTemp - lowTemp >= thresholds.largeDrop;
 
   let summary: string;
-  let clothing: string;
 
   if (isRainy) {
-    clothing = "Jacket and umbrella";
     summary = "Rainy evening ahead, staying wet and cool as the night sets in";
   } else if (willCoolDown) {
-    clothing = "Warm jacket for tonight";
     if (isCool) {
       summary = "Cool evening getting chillier, bundle up as temperatures drop tonight";
     } else {
       summary = "Mild now but cooling down, grab a jacket as the evening progresses";
     }
   } else if (isCool) {
-    clothing = "Warm layers for tonight";
     if (/clear/.test(condition)) {
       summary = "Cool and clear evening, staying crisp with nice skies through tonight";
     } else {
       summary = "Cool evening settling in, staying on the chilly side through the night";
     }
   } else {
-    clothing = "Light jacket optional";
     if (/clear/.test(condition)) {
       summary = "Pleasant evening with clear skies, comfortable conditions tonight";
     } else {
@@ -383,7 +361,7 @@ function buildEveningSummary({ currentTemp, lowTemp, condition, isRainy, thresho
     }
   }
 
-  return { summary, clothing };
+  return { summary };
 }
 
 function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thresholds }: NightSummaryParams): SummaryResult {
@@ -392,42 +370,36 @@ function buildNightSummary({ tomorrowHigh, tomorrowLow, condition, isRainy, thre
   const willBeWarm = tomorrowHigh >= thresholds.warmNight;
 
   let summary: string;
-  let clothing: string;
 
   if (isRainy) {
-    clothing = "Rain gear ready for tomorrow";
     if (willBeCold) {
       summary = "Tomorrow rainy and cool, expect wet conditions and chilly temperatures";
     } else {
       summary = "Tomorrow bringing rain and clouds, stay dry with umbrella and layers";
     }
   } else if (willBeHot) {
-    clothing = "Light clothes for tomorrow";
     if (tomorrowHigh >= thresholds.extremeHeat) {
       summary = "Dangerously hot tomorrow, prepare for extreme heat and stay inside";
     } else {
       summary = "Tomorrow heating up nicely, expect warm sunny skies and hot temperatures";
     }
   } else if (willBeWarm) {
-    clothing = "Comfortable layers for tomorrow";
     if (/fog|mist/.test(condition)) {
       summary = "Tomorrow foggy start clearing out, warming to pleasant afternoon temps";
     } else {
       summary = "Tomorrow pleasant and mild, comfortable temperatures throughout the day";
     }
   } else if (willBeCold) {
-    clothing = "Warm layers for tomorrow";
     if (/cloud/.test(condition)) {
       summary = "Tomorrow cool and cloudy, staying on the chilly side all day long";
     } else {
       summary = "Tomorrow crisp and cool, bundle up for chilly temperatures ahead";
     }
   } else {
-    clothing = "Light jacket for tomorrow";
     summary = "Tomorrow comfortable and mild, nice conditions throughout the day ahead";
   }
 
-  return { summary, clothing };
+  return { summary };
 }
 
 function deriveThresholds(): Thresholds {

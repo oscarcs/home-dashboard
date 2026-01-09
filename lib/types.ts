@@ -136,7 +136,6 @@ export interface DashboardData {
   cloud_cover: number;
   precipitation: PrecipitationData;
   calendar_events: CalendarEvent[];
-  clothing_suggestion: string;
   daily_summary: string;
   llm_source?: string;
   last_updated: string;
@@ -209,7 +208,6 @@ export interface CurrentWeather {
 // ----------------------------------------------------------------------------
 
 export interface LLMInsights {
-  clothing_suggestion: string;
   daily_summary: string;
 }
 

@@ -218,16 +218,13 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
   }
 
   async fetchLocationData(apiKey: string, locationQuery: string, _logger: Logger): Promise<LocationData> {
-    // 1. Geocode the location
     const geo = await this.geocodeLocation(apiKey, locationQuery);
     if (!geo) {
       throw new Error(`Could not resolve location: ${locationQuery}`);
     }
 
-    // 2. Fetch Weather Data (Metric defaults)
     const baseUrl = 'https://weather.googleapis.com/v1';
 
-    // We need to fetch 3 endpoints concurrently
     const currentUrl = `${baseUrl}/currentConditions:lookup?key=${apiKey}&location.latitude=${geo.lat}&location.longitude=${geo.lng}`;
     const dailyUrl = `${baseUrl}/forecast/days:lookup?key=${apiKey}&location.latitude=${geo.lat}&location.longitude=${geo.lng}&days=7`;
     const hourlyUrl = `${baseUrl}/forecast/hours:lookup?key=${apiKey}&location.latitude=${geo.lat}&location.longitude=${geo.lng}&hours=24`;

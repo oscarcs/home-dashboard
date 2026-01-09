@@ -75,7 +75,6 @@ interface PromptResult {
 }
 
 interface LLMInsights {
-  clothing_suggestion: string;
   daily_summary: string;
   _meta?: {
     input_tokens: number;
@@ -159,8 +158,7 @@ class LLMService extends BaseService<LLMInsights, LLMServiceConfig> {
       const cost = (inputTokens * 0.1 / 1000000) + (outputTokens * 0.4 / 1000000);
 
       return {
-        clothing_suggestion: parsed.clothing_suggestion || "No suggestion available",
-        daily_summary: parsed.daily_summary || "No summary available",
+        daily_summary: parsed.daily_summary || "",
         _meta: {
           input_tokens: inputTokens,
           output_tokens: outputTokens,
@@ -175,7 +173,6 @@ class LLMService extends BaseService<LLMInsights, LLMServiceConfig> {
 
   mapToDashboard(apiData: LLMInsights, _config: LLMServiceConfig): LLMInsights {
     return {
-      clothing_suggestion: apiData.clothing_suggestion,
       daily_summary: apiData.daily_summary,
       _meta: apiData._meta,
     };
@@ -241,12 +238,10 @@ class LLMService extends BaseService<LLMInsights, LLMServiceConfig> {
 
 Return JSON:
 {
-  "clothing_suggestion": "practical clothingadvice, max 6 words",
   "daily_summary": "vivid weather narrative, 60-78 chars total (including spaces and punctuation), no ending punctuation"
 }
 
 Style:
-- Comment specifically on things that are normal or out of the ordinary, help the user plan their day
 - Write like a friendly late night weather reporter providing informative updates
 - Keep observations factual and helpful
 - Describe changes: "warming up", "heating up fast", "cooling down", "drying out", "getting wetter", "clearing up", "getting cloudy"
@@ -256,12 +251,12 @@ Rules:
 - DO NOT mention specific month or date, but you can describe the season (e.g. Summer, Spring, Fall, Winter)
 
 Examples:
-{"clothing_suggestion": "Warm layers and rain gear", "daily_summary": "Dreary and rainy most of the day. Rain not letting up, stay cozy and dry"}
-{"clothing_suggestion": "Layers you can shed", "daily_summary": "Cool start warming up fast, sunny and pleasant by afternoon"}
-{"clothing_suggestion": "Sweater for the day", "daily_summary": "Chilly and misty this morning, staying fairly cool throughout the day"}
-{"clothing_suggestion": "Jacket for tonight", "daily_summary": "Breezy and mild now, cooling down with clear skies come evening"}
-{"clothing_suggestion": "Light layers, potentially shorts weather", "daily_summary": "Tomorrow foggy and cool early, clearing to sunny skies and warm temperatures"}
-{"clothing_suggestion": "Warm jacket and layers", "daily_summary": "Misty morning transforming into a gorgeous mild but sunny afternoon"}
+{"daily_summary": "Dreary and rainy most of the day. Rain not letting up, stay cozy and dry"}
+{"daily_summary": "Cool start warming up fast, sunny and pleasant by afternoon"}
+{"daily_summary": "Chilly and misty this morning, staying fairly cool throughout the day"}
+{"daily_summary": "Breezy and mild now, cooling down with clear skies come evening"}
+{"daily_summary": "Tomorrow foggy and cool early, clearing to sunny skies and warm temperatures"}
+{"daily_summary": "Misty morning transforming into a gorgeous mild but sunny afternoon"}
 
 Remember:
 - Daily summary must be at least 60 characters and CANNOT be more than 78 total characters (including spaces and punctuation)
@@ -313,13 +308,13 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
     // Temperature swing
     const temps = relevantHourly.map(h => h.temp ?? 20);
     const tempRange = temps.length > 0 ? Math.max(...temps) - Math.min(...temps) : 0;
-    if (tempRange >= 8) {  // ~15°F in Celsius
+    if (tempRange >= 8) {
       context.contextNotes.push(`${Math.round(tempRange)}° temperature swing`);
     }
 
     // Wind
     const maxWind = Math.max(...relevantHourly.map(h => h.wind_speed || 0));
-    if (maxWind >= 20) {  // ~12 mph in km/h
+    if (maxWind >= 20) {
       context.contextNotes.push(`Windy, gusts ${Math.round(maxWind)} km/h`);
     }
 
