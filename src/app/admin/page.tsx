@@ -29,7 +29,7 @@ interface DisplaySync {
   error?: string | null;
 }
 
-interface LLMCostInfo {
+interface AICostInfo {
   last_call: {
     total_tokens: number;
     cost_usd: number;
@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [services, setServices] = useState<Record<string, ServiceInfo>>({});
   const [displaySync, setDisplaySync] = useState<DisplaySync | null>(null);
-  const [llmCost, setLLMCost] = useState<LLMCostInfo | null>(null);
+  const [aiCost, setAICost] = useState<AICostInfo | null>(null);
   const [promptDialog, setPromptDialog] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -112,7 +112,7 @@ export default function AdminPage() {
       const data = await fetchJSON('/api/services/status');
       setServices(data.services);
       setDisplaySync(data.lastDisplaySync);
-      setLLMCost(data.llmCost);
+      setAICost(data.aiCost);
       setLoading(false);
     } catch (e) {
       console.error('Error loading services:', e);
@@ -238,16 +238,16 @@ export default function AdminPage() {
                         </div>
                       )}
                       {info.error && <div className="service-detail service-error">Error: {info.error}</div>}
-                      {name === 'llm' && llmCost && (
+                      {name === 'weather' && aiCost && (
                         <div className="service-detail">
                           <span
                             style={{ cursor: 'pointer', textDecoration: 'underline dotted' }}
-                            onClick={() => setPromptDialog(llmCost.last_call.prompt || '')}
+                            onClick={() => setPromptDialog(aiCost.last_call.prompt || '')}
                           >
-                            {llmCost.last_call.total_tokens} tokens
+                            AI: {aiCost.last_call.total_tokens} tokens
                           </span>
-                          . Cost: ${llmCost.last_call.cost_usd.toFixed(4)}, est. $
-                          {llmCost.projections.monthly_cost_usd.toFixed(2)}/mo
+                          . Cost: ${aiCost.last_call.cost_usd.toFixed(4)}, est. $
+                          {aiCost.projections.monthly_cost_usd.toFixed(2)}/mo
                         </div>
                       )}
                     </div>
@@ -262,7 +262,7 @@ export default function AdminPage() {
       {promptDialog !== null && (
         <dialog open style={{ padding: '20px', borderRadius: '8px', border: '1px solid #ccc' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0 }}>LLM Prompt</h3>
+            <h3 style={{ margin: 0 }}>AI Prompt</h3>
             <button className="btn" onClick={() => setPromptDialog(null)}>
               Close
             </button>

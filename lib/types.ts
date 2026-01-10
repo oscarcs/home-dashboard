@@ -137,13 +137,22 @@ export interface DashboardData {
   precipitation: PrecipitationData;
   calendar_events: CalendarEvent[];
   daily_summary: string;
-  llm_source?: string;
+  weather_summary_source?: string;
+  news_summary?: string;
+  markets?: MarketsData;
   last_updated: string;
   units: Units;
   _serviceStatuses?: {
     weather: ServiceStatus;
-    llm: ServiceStatus;
     calendar: ServiceStatus;
+    news: ServiceStatus;
+    markets: ServiceStatus;
+  };
+  _ai_cost?: {
+    total_tokens: number;
+    cost_usd: number;
+    prompt: string;
+    monthly_cost_usd: number;
   };
 }
 
@@ -209,6 +218,38 @@ export interface CurrentWeather {
 
 export interface LLMInsights {
   daily_summary: string;
+}
+
+// ----------------------------------------------------------------------------
+// News Service Types
+// ----------------------------------------------------------------------------
+
+export interface NewsHeadline {
+  source: string;
+  title: string;
+}
+
+export interface NewsData {
+  headlines: NewsHeadline[];
+  summary: string;
+}
+
+// ----------------------------------------------------------------------------
+// Markets Service Types
+// ----------------------------------------------------------------------------
+
+export interface MarketQuote {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  currency: string;
+}
+
+export interface MarketsData {
+  quotes: MarketQuote[];
+  lastUpdated: number;
 }
 
 

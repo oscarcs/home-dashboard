@@ -1,7 +1,8 @@
 // @ts-nocheck - Services are not yet converted to TypeScript
 import { WeatherService } from '../services/weatherService';
-import { LLMService } from '../services/llmService';
 import { CalendarService } from '../services/calendarService';
+import { NewsService } from '../services/newsService';
+import { MarketsService } from '../services/marketsService';
 import { getStateKey, setStateKey } from './state';
 import { buildStaticDescription, getWindDirection } from './weatherUtils';
 import { getBaseUrl } from './utils';
@@ -17,7 +18,8 @@ import type {
   CalendarEvent,
   ServiceStatus,
   Units,
-  LLMInsights,
+  NewsData,
+  MarketsData,
 } from './types';
 
 
@@ -50,8 +52,9 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 
   // Initialize all services (each service defines its own cache TTL)
   const weatherService = new WeatherService();
-  const llmService = new LLMService();
   const calendarService = new CalendarService();
+  const newsService = new NewsService();
+  const marketsService = new MarketsService();
 
   // Fetch weather data (REQUIRED)
   let weatherData: WeatherData;
@@ -96,6 +99,38 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     calendarStatus = calendarService.getStatus();
   }
 
+  // Fetch news (optional)
+  let news_summary = '';
+  let newsStatus: ServiceStatus;
+  try {
+    const result = await newsService.getData({}, logger);
+    const newsData: NewsData | null = result.data;
+    newsStatus = result.status;
+
+    if (newsData && newsData.summary) {
+      news_summary = newsData.summary;
+      logger.info?.('[DataBuilder] News summary retrieved');
+    }
+  } catch (error) {
+    const err = error as Error;
+    logger.info?.('[DataBuilder] News service unavailable (optional):', err.message);
+    newsStatus = newsService.getStatus();
+  }
+
+  // Fetch markets (optional)
+  let markets: MarketsData | undefined = undefined;
+  let marketsStatus: ServiceStatus;
+  try {
+    const result = await marketsService.getData({}, logger);
+    markets = result.data || undefined;
+    marketsStatus = result.status;
+    logger.info?.('[DataBuilder] Markets data retrieved');
+  } catch (error) {
+    const err = error as Error;
+    logger.info?.('[DataBuilder] Markets service unavailable (optional):', err.message);
+    marketsStatus = marketsService.getStatus();
+  }
+
   // Compute temperature comparison (today's high vs yesterday's high)
   const todayForecast = weatherData.locations[0]?.forecast?.[0];
   const todayHigh = todayForecast?.high;
@@ -124,79 +159,47 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     precipitation,
     calendar_events,
     daily_summary: '',
+    news_summary,
+    markets,
     last_updated: formatTime(now),
     units: weatherData.units,
   };
 
-  // Fetch LLM insights (optional)
-  let llmStatus: ServiceStatus;
-  let hasValidInsights = false;
+  // Use AI insights from weather service if available
+  if (weatherData.daily_summary && weatherData.daily_summary.trim().length > 0) {
+    data.daily_summary = weatherData.daily_summary.trim();
+    data.weather_summary_source = 'ai';
+    logger.info?.('[DataBuilder] Using AI-generated weather summary');
 
-  try {
-    const llmConfig = {
-      input: {
-        current,
-        forecast: data.forecast,
-        hourlyForecast: data.hourlyForecast,
-        calendar: data.calendar_events,
-        location: data.locations[0],
-        timezone: weatherData.timezone,
-        sun: data.sun,
-        moon: data.moon,
-        air_quality: data.air_quality,
-        units: data.units,
-      },
-    };
-    const result = await llmService.getData(llmConfig, logger);
-    const insights: LLMInsights | null = result.data;
-    llmStatus = result.status;
-
-    // Check if we got valid insights from LLM
-    if (insights && insights.daily_summary && insights.daily_summary.trim().length > 0) {
-      data.daily_summary = insights.daily_summary.trim();
-      data.llm_source = result.source;
-      hasValidInsights = true;
+    // Add AI cost info if available
+    const aiCostInfo = weatherService.getAICostInfo();
+    if (aiCostInfo) {
+      data._ai_cost = {
+        total_tokens: aiCostInfo.last_call.total_tokens,
+        cost_usd: aiCostInfo.last_call.cost_usd,
+        prompt: aiCostInfo.last_call.prompt,
+        monthly_cost_usd: aiCostInfo.projections.monthly_cost_usd,
+      };
     }
-  } catch (error) {
-    const err = error as Error;
-    logger.info?.('[DataBuilder] LLM service error (optional):', err.message);
-    llmStatus = llmService.getStatus();
-  }
-
-  // If no valid insights (disabled, error, or invalid response), try fallbacks
-  if (!hasValidInsights) {
-    let usedCache = false;
-
-    // Try to use stale cache for LLM
-    try {
-      const staleCache = llmService.getCache(true) as LLMInsights | null; // true = allow stale
-      if (staleCache && staleCache.daily_summary) {
-        data.daily_summary = staleCache.daily_summary.trim();
-        data.llm_source = 'stale_cache';
-        usedCache = true;
-        logger.info?.('[DataBuilder] Using stale LLM cache');
-      }
-    } catch (_) { }
-
-    // If no cache available, use static description fallback
-    if (!usedCache) {
-      logger.info?.('[DataBuilder] Using static description fallback');
-      const staticDescription = buildStaticDescription({
-        current,
-        forecast: data.forecast,
-        hourlyForecast: data.hourlyForecast,
-        units: data.units,
-      });
-      data.daily_summary = staticDescription.daily_summary;
-      data.llm_source = 'static_fallback';
-    }
+  } else {
+    // Fallback to static description
+    logger.info?.('[DataBuilder] Using static description fallback');
+    const staticDescription = buildStaticDescription({
+      current,
+      forecast: data.forecast,
+      hourlyForecast: data.hourlyForecast,
+      units: data.units,
+    });
+    data.daily_summary = staticDescription.daily_summary;
+    data.weather_summary_source = 'static_fallback';
   }
 
   // Attach service statuses for admin panel
   data._serviceStatuses = {
     weather: weatherStatus,
-    llm: llmStatus,
     calendar: calendarStatus,
+    news: newsStatus,
+    markets: marketsStatus,
   };
 
   return data;
@@ -210,14 +213,16 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 export function getServiceStatuses(): Record<string, ServiceStatus> {
   // Instantiate services to get their TTL values
   const weatherService = new WeatherService();
-  const llmService = new LLMService();
   const calendarService = new CalendarService();
+  const newsService = new NewsService();
+  const marketsService = new MarketsService();
 
   // Service definitions
   const serviceConfigs: Record<string, { service: any }> = {
     weather: { service: weatherService },
-    llm: { service: llmService },
     calendar: { service: calendarService },
+    news: { service: newsService },
+    markets: { service: marketsService },
   };
 
   const allStatuses = getStateKey<Record<string, Partial<ServiceStatus>>>('service_status', {});
