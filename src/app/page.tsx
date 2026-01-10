@@ -9,8 +9,8 @@ export default function HomePage() {
       <p style={{ marginBottom: '2rem', color: '#666' }}>
         E-Paper home dashboard for weather, calendar, and more
       </p>
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <Link 
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <Link
           href="/dashboard"
           style={{
             padding: '0.75rem 1.5rem',
@@ -20,9 +20,9 @@ export default function HomePage() {
             borderRadius: '0.5rem'
           }}
         >
-          Dashboard
+          Open Dashboard
         </Link>
-        <Link 
+        <Link
           href="/admin"
           style={{
             padding: '0.75rem 1.5rem',
@@ -33,6 +33,30 @@ export default function HomePage() {
           }}
         >
           Admin Panel
+        </Link>
+        <Link
+          href="/test-services"
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#059669', // Emerald 600
+            color: '#fff',
+            textDecoration: 'none',
+            borderRadius: '0.5rem'
+          }}
+        >
+          Test Services
+        </Link>
+        <Link
+          href="/design-review"
+          style={{
+            padding: '0.75rem 1.5rem',
+            background: '#2563eb', // Blue 600
+            color: '#fff',
+            textDecoration: 'none',
+            borderRadius: '0.5rem'
+          }}
+        >
+          Design Review
         </Link>
       </div>
     </div>

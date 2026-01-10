@@ -265,7 +265,7 @@ export default function DashboardClient({
   };
 
   return (
-    <>
+    <div className="dashboard-container">
       <style>
         {`
           :root {
@@ -522,6 +522,6 @@ export default function DashboardClient({
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

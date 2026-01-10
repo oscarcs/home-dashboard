@@ -217,7 +217,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
     });
   }
 
-  getCacheSignature(): string {
+  getCacheSignature(_?: WeatherServiceConfig): string {
     const locations = this.getConfiguredLocations();
     return JSON.stringify({ locations });
   }
@@ -295,71 +295,6 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
     return Promise.all(promises);
   }
 
-  // Override getData to handle async mapToDashboard
-  async getData(config: WeatherServiceConfig, logger: Logger = console) {
-    const cacheSignature = this.getCacheSignature(config);
-    this.loadStatus();
-
-    if (!this.isEnabled()) {
-      this.status.state = 'disabled';
-      this.saveStatus();
-      return { data: null as any, source: 'disabled' as const, status: this.getStatus() };
-    }
-
-    const cached = this.getCache(false, cacheSignature);
-    if (cached) {
-      logger.info?.(`[${this.name}] Using valid cache`);
-      this.status.state = 'healthy';
-      this.saveStatus();
-      return { data: cached, source: 'cache' as const, status: this.getStatus() };
-    }
-
-    let lastError: Error | undefined;
-    for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
-      try {
-        if (attempt > 0) {
-          const delay = this.getBackoffDelay(attempt - 1);
-          logger.warn?.(`[${this.name}] Retry attempt ${attempt + 1}/${this.retryAttempts} after ${delay}ms`);
-          await this.sleep(delay);
-        }
-
-        const apiCallStart = Date.now();
-        const apiData = await this.fetchData(config, logger);
-        const apiLatency = Date.now() - apiCallStart;
-
-        const dashboardData = await this.mapToDashboard(apiData, config);
-        this.setCache(dashboardData, cacheSignature);
-
-        this.status.state = 'healthy';
-        this.status.latency = apiLatency;
-        this.status.error = null;
-        this.saveStatus();
-
-        logger.info?.(`[${this.name}] Fetched successfully from API`);
-        return { data: dashboardData, source: 'api' as const, status: this.getStatus() };
-      } catch (error) {
-        lastError = error as Error;
-        logger.warn?.(`[${this.name}] Attempt ${attempt + 1} failed: ${lastError.message}`);
-      }
-    }
-
-    const staleCache = this.getCache(true, cacheSignature);
-    if (staleCache) {
-      logger.warn?.(`[${this.name}] API failed, using stale cache. Error: ${lastError!.message}`);
-      this.status.state = 'degraded';
-      this.status.error = lastError!.message;
-      this.saveStatus();
-      return { data: staleCache, source: 'stale_cache' as const, status: this.getStatus() };
-    }
-
-    logger.error?.(`[${this.name}] API failed with no cache fallback: ${lastError!.message}`);
-    this.status.state = 'unhealthy';
-    this.status.latency = null;
-    this.status.error = lastError!.message;
-    this.saveStatus();
-
-    throw lastError!;
-  }
 
   async mapToDashboard(apiResults: LocationData[], _config: WeatherServiceConfig): Promise<WeatherDashboardData> {
     if (!Array.isArray(apiResults) || apiResults.length === 0) {

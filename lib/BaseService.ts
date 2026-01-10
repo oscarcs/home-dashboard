@@ -126,7 +126,7 @@ export abstract class BaseService<TData = unknown, TConfig = Record<string, unkn
    * @param _config - Configuration object
    * @returns Dashboard-formatted data (also cached)
    */
-  protected mapToDashboard(apiData: unknown, _config: TConfig): TData {
+  protected mapToDashboard(apiData: unknown, _config: TConfig): TData | Promise<TData> {
     return apiData as TData; // Default: return as-is
   }
 
@@ -213,7 +213,7 @@ export abstract class BaseService<TData = unknown, TConfig = Record<string, unkn
         const apiData = await this.fetchData(config, logger);
         const apiLatency = Date.now() - apiCallStart;
 
-        const dashboardData = this.mapToDashboard(apiData, config);
+        const dashboardData = await this.mapToDashboard(apiData, config);
         this.setCache(dashboardData, cacheSignature);
 
         this.status.state = 'healthy';

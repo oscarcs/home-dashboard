@@ -1,6 +1,8 @@
 /* Import base styles */
 @import url('base.css');
 
+/* Global html styles removed to prevent ReviewInterface pollution */
+/* 
 html {
   background: #000;
   height: 100%;
@@ -8,8 +10,9 @@ html {
   justify-content: center;
   align-items: center;
 }
+*/
 
-body {
+.dashboard-container {
   width: var(--display-width, 800px);
   height: var(--display-height, 480px);
   font-family: 'Geist Mono', 'SF Mono', 'Courier New', monospace;
