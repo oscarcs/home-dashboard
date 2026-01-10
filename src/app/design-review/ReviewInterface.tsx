@@ -4,7 +4,10 @@ import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
 // We'll import the original dashboard to compare
 import OriginalDashboard from '../dashboard/DashboardClient';
-// We'll enable importing new designs here
+// Import new design proposals
+import BrutalistGrid from './designs/BrutalistGrid';
+import EditorialBroadsheet from './designs/EditorialBroadsheet';
+import TerminalMatrix from './designs/TerminalMatrix';
 
 interface ReviewInterfaceProps {
     data: DashboardData;
@@ -17,10 +20,9 @@ interface ReviewInterfaceProps {
 
 const DESIGNS = [
     { id: 'original', name: 'Original', component: OriginalDashboard },
-    // To add a new design:
-    // 1. Create your component in ./designs/YourDesign.tsx
-    // 2. Import it here
-    // 3. Add to this array: { id: 'new-design', name: 'New Design', component: YourDesign }
+    { id: 'brutalist', name: 'Brutalist Grid', component: BrutalistGrid },
+    { id: 'editorial', name: 'Editorial Broadsheet', component: EditorialBroadsheet },
+    { id: 'terminal', name: 'Terminal Matrix', component: TerminalMatrix },
 ];
 
 export default function ReviewInterface(props: ReviewInterfaceProps) {
