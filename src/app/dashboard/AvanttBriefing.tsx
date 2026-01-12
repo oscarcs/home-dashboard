@@ -90,15 +90,12 @@ export default function AvanttBriefing({
 
   const getFriendlyMarketName = (symbol: string) => {
     const mapping: Record<string, string> = {
-      '^GSPC': 'S&P 500',
-      '^DJI': 'Dow J.',
+      '^GSPC': 'SPX',
+      '^DJI': 'DJIA',
       '^IXIC': 'Nasdaq',
-      'CL=F': 'Crude',
-      'GC=F': 'Gold',
-      'BTC-USD': 'Bitcoin',
-      'AUDUSD=X': 'AUD/USD',
-      'AUDNZD=X': 'AUD/NZD',
-      'ETH-USD': 'Ethereum',
+      'CL=F': 'WTI',
+      'AUDUSD=X': 'AUDUSD',
+      'AUDNZD=X': 'AUDNZD',
     };
     return mapping[symbol] || symbol;
   };
