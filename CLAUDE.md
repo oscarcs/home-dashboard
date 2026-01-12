@@ -3,7 +3,7 @@
 Dashboard for e-ink displays (800x480, 1-bit BW).
 
 ## Commands
-- `npm run dev`: Start dev server (Port 7272)
+- `npm run dev`: Start dev server
 - `npm run build`: Production build
 - `npm start`: Start production server
 - `npm run typecheck`: Run TypeScript checks

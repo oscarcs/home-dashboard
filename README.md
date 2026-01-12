@@ -48,14 +48,14 @@ The server runs on **port 7272** by default.
 ### 4. Access the Dashboard
 
 **Core routes:**
-- Home: `http://localhost:7272`
-- Dashboard: `http://localhost:7272/dashboard`
-- E-paper 1-bit PNG image: `http://localhost:7272/api/dashboard/image`
-- Admin panel: `http://localhost:7272/admin`
+- Home: `/`
+- Dashboard: `/dashboard`
+- E-paper 1-bit PNG image: `/api/dashboard/image`
+- Admin panel: `/admin`
 
 **API endpoints (used for debugging and custom development):**
-- Dashboard data JSON: `http://localhost:7272/api/dashboard`
-- Services status: `http://localhost:7272/api/services/status`
+- Dashboard data JSON: `/api/dashboard`
+- Services status: `/api/services/status`
 
 ## Production Deployment
 
@@ -115,7 +115,7 @@ Display upcoming calendar events.
 2. Create a new project (or use existing)
 3. Enable the **Google Calendar API**
 4. Create **OAuth 2.0 credentials** (Web application type)
-5. Add authorized redirect URI: `http://localhost:7272/auth/google/callback`
+5. Add authorized redirect URI: `/auth/google/callback`
 6. Download client ID and secret
 7. Add to `.env`:
    ```bash
