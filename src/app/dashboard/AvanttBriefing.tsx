@@ -2,6 +2,19 @@
 
 import type { DashboardData } from '@/lib/types';
 import './AvanttBriefing.css';
+import {
+  SunIcon,
+  CloudSunIcon,
+  CloudIcon,
+  CloudRainIcon,
+  SnowflakeIcon,
+  LightningIcon,
+  ArrowClockwiseIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  CaretUpIcon,
+  CaretDownIcon,
+} from '@phosphor-icons/react';
 
 interface AvanttBriefingProps {
   data: DashboardData;
@@ -64,12 +77,15 @@ export default function AvanttBriefing({
 
   const getWeatherIcon = (icon: string) => {
     const iconLower = icon.toLowerCase();
-    if (iconLower.includes('sunny') || iconLower.includes('clear')) return '○';
-    if (iconLower.includes('partly') || iconLower.includes('cloud')) return '◐';
-    if (iconLower.includes('rain')) return '≡';
-    if (iconLower.includes('snow')) return '❋';
-    if (iconLower.includes('thunder') || iconLower.includes('storm')) return '⚡';
-    return '○';
+    const props = { size: "1em", weight: "fill" as const };
+
+    if (iconLower.includes('sunny') || iconLower.includes('clear')) return <SunIcon {...props} />;
+    if (iconLower.includes('partly')) return <CloudSunIcon {...props} />;
+    if (iconLower.includes('cloud')) return <CloudIcon {...props} />;
+    if (iconLower.includes('rain')) return <CloudRainIcon {...props} />;
+    if (iconLower.includes('snow')) return <SnowflakeIcon {...props} />;
+    if (iconLower.includes('thunder') || iconLower.includes('storm')) return <LightningIcon {...props} />;
+    return <SunIcon {...props} />;
   };
 
   const getFriendlyMarketName = (symbol: string) => {
@@ -143,7 +159,7 @@ export default function AvanttBriefing({
 
       {/* Refresh time indicator */}
       <div className="ab-refresh-time">
-        <span>↻</span>
+        <ArrowClockwiseIcon size="1em" weight="bold" />
         <span>{formatRefreshTime(date)}</span>
       </div>
 
@@ -155,8 +171,12 @@ export default function AvanttBriefing({
           <div className="ab-header-left">
             <div className="ab-hero-text">{formatDate(date)}</div>
             <div className="ab-sun-times">
-              <span className="ab-sun-time">↑ {to24Hour(sun?.sunrise)}</span>
-              <span className="ab-sun-time">↓ {to24Hour(sun?.sunset)}</span>
+              <span className="ab-sun-time" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ArrowUpIcon size="1em" weight="bold" /> {to24Hour(sun?.sunrise)}
+              </span>
+              <span className="ab-sun-time" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ArrowDownIcon size="1em" weight="bold" /> {to24Hour(sun?.sunset)}
+              </span>
             </div>
           </div>
 
@@ -235,7 +255,10 @@ export default function AvanttBriefing({
               markets.quotes.map((quote, i) => (
                 <div key={i} className="ab-market-item">
                   <div className="ab-market-arrow">
-                    {quote.change >= 0 ? '▲' : '▼'}
+                    {quote.change >= 0 ?
+                      <CaretUpIcon size="1em" weight="fill" /> :
+                      <CaretDownIcon size="1em" weight="fill" />
+                    }
                   </div>
                   <div className="ab-market-label">{getFriendlyMarketName(quote.symbol)}</div>
                   <div className="ab-market-change">
