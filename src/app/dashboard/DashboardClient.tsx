@@ -1,6 +1,6 @@
 'use client';
 
-import AvanttBriefing from '../design-review/designs/AvanttBriefing';
+import AvanttBriefing from './AvanttBriefing';
 import type { DashboardData } from '@/lib/types';
 
 interface DashboardClientProps {
