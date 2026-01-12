@@ -2,12 +2,8 @@
 
 import { useState } from 'react';
 import type { DashboardData } from '@/lib/types';
-// We'll import the original dashboard to compare
 import OriginalDashboard from '../dashboard/DashboardClient';
-// Import new design proposals
-import BrutalistGrid from './designs/BrutalistGrid';
-import EditorialBroadsheet from './designs/EditorialBroadsheet';
-import TerminalMatrix from './designs/TerminalMatrix';
+import AvanttBriefing from './designs/AvanttBriefing';
 
 interface ReviewInterfaceProps {
     data: DashboardData;
@@ -20,9 +16,7 @@ interface ReviewInterfaceProps {
 
 const DESIGNS = [
     { id: 'original', name: 'Original', component: OriginalDashboard },
-    { id: 'brutalist', name: 'Brutalist Grid', component: BrutalistGrid },
-    { id: 'editorial', name: 'Editorial Broadsheet', component: EditorialBroadsheet },
-    { id: 'terminal', name: 'Terminal Matrix', component: TerminalMatrix },
+    { id: 'avantt', name: 'AvanttBriefing', component: AvanttBriefing },
 ];
 
 export default function ReviewInterface(props: ReviewInterfaceProps) {
@@ -82,7 +76,7 @@ export default function ReviewInterface(props: ReviewInterfaceProps) {
                     boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
                     position: 'relative',
                     overflow: 'hidden',
-                    border: '1px solid #ddd' // Border to see boundaries on white bg
+                    border: '1px solid #ddd'
                 }}>
                     <CurrentComponent {...props} />
                 </div>

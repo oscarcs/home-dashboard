@@ -1,0 +1,369 @@
+/* AvanttBriefing - Clean typographic dashboard with structured layout */
+
+.ab-container {
+  width: var(--display-width);
+  height: var(--display-height);
+  background: #FFFFFF;
+  color: #000000;
+  font-family: 'Avantt', sans-serif;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ab-wrapper {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================================
+   DIVIDERS
+   ============================================================================ */
+
+.ab-divider {
+  width: 100%;
+  height: 1px;
+  background: #000000;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   HEADER SECTION (Top)
+   ============================================================================ */
+
+.ab-header {
+  display: flex;
+  padding-bottom: 12px;
+  flex-shrink: 0;
+  height: 140px;
+}
+
+/* Shared hero text style for date and temperature */
+.ab-hero-text {
+  font-size: 64px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Left Column - Date & Sun Times */
+.ab-header-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border-right: 1px solid #000000;
+  padding-right: 16px;
+}
+
+.ab-sun-times {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.ab-sun-time {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Middle Column - 5-day Forecast Graph */
+.ab-header-middle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-right: 1px solid #000000;
+}
+
+.ab-forecast-graph {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 4px;
+}
+
+.ab-forecast-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ab-temp-high,
+.ab-temp-low {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ab-temp-high {
+  margin-top: 4px;
+}
+
+.ab-temp-low {
+  margin-bottom: 4px;
+}
+
+.ab-temp-bar-container {
+  flex: 1;
+  width: 6px;
+  position: relative;
+  min-height: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+  background-size: 2px 2px;
+}
+
+.ab-temp-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #000000;
+}
+
+.ab-forecast-label {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.ab-weather-icon {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* Right Column - Current Status */
+.ab-header-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding-left: 16px;
+}
+
+.ab-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ab-current-icon {
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.ab-current-details {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+/* ============================================================================
+   BRIEFING SECTION (Middle)
+   ============================================================================ */
+
+.ab-briefing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  min-height: 0;
+}
+
+.ab-forecast-summary {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  padding-bottom: 10px;
+}
+
+.ab-news {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-top: 10px;
+  min-height: 0;
+}
+
+.ab-news-header {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.ab-news-label {
+  font-size: 17px;
+  font-weight: 600;
+  font-style: italic;
+  margin-right: 4px;
+}
+
+.ab-news-main {
+  font-size: 17px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.ab-news-item {
+  font-size: 16px;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ab-news-item.ab-news-header {
+  font-style: normal;
+}
+
+.ab-news-source {
+  background: #000;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  padding: 2px 6px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+/* ============================================================================
+   FOOTER SECTION (Bottom)
+   ============================================================================ */
+
+.ab-footer {
+  display: flex;
+  padding-top: 12px;
+  flex-shrink: 0;
+  height: 100px;
+}
+
+/* Left Column - Markets (60%) */
+.ab-footer-left {
+  width: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  border-right: 1px solid #000000;
+  padding-right: 16px;
+}
+
+.ab-market-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ab-market-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ab-market-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ab-market-change {
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.ab-no-markets {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Right Column - Precipitation (40%) */
+.ab-footer-right {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  padding-left: 16px;
+}
+
+.ab-precip-header {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ab-precip-chart {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+}
+
+.ab-precip-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  pointer-events: none;
+}
+
+.ab-precip-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='1'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+  background-size: 4px 1px;
+}
+
+.ab-precip-bars {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  padding-bottom: 14px;
+}
+
+.ab-precip-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.ab-precip-bar {
+  width: 100%;
+  background: #000000;
+  min-height: 2px;
+}
+
+.ab-precip-label {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
