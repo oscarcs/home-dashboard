@@ -12,6 +12,7 @@ Assume during development that the dev server is already running and accessible 
 
 ## Project Structure
 - `src/app/dashboard`: Main UI (React/Server Components)
+- `src/app/preview`: Side-by-side comparison of UI and generated image
 - `src/app/api/dashboard/image`: Puppeteer/Sharp image generation
 - `services/`: Data fetchers extension from `BaseService`
 - `lib/`: Data aggregation and core types

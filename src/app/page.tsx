@@ -38,7 +38,7 @@ export default function HomePage() {
           href="/test-services"
           style={{
             padding: '0.75rem 1.5rem',
-            background: '#059669', // Emerald 600
+            background: '#059669',
             color: '#fff',
             textDecoration: 'none',
             borderRadius: '0.5rem'
@@ -47,16 +47,16 @@ export default function HomePage() {
           Test Services
         </Link>
         <Link
-          href="/design-review"
+          href="/preview"
           style={{
             padding: '0.75rem 1.5rem',
-            background: '#2563eb', // Blue 600
+            background: '#3b36cbff',
             color: '#fff',
             textDecoration: 'none',
             borderRadius: '0.5rem'
           }}
         >
-          Design Review
+          Preview Mode
         </Link>
       </div>
     </div>

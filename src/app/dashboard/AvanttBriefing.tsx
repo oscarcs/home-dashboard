@@ -132,7 +132,14 @@ export default function AvanttBriefing({
   return (
     <div className="ab-container">
       <link rel="stylesheet" href="/styles/fonts/fonts.css" />
-      <style>{`:root { --display-width: ${display_width}px; --display-height: ${display_height}px; }`}</style>
+      <style>{`
+        :root { 
+          --display-width: ${display_width}px; 
+          --display-height: ${display_height}px; 
+        }
+        body { margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
+      `}</style>
 
       {/* Refresh time indicator */}
       <div className="ab-refresh-time">

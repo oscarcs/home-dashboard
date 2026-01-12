@@ -67,6 +67,10 @@ export async function GET(request: NextRequest) {
           text-rendering: optimizeSpeed !important;
           shape-rendering: crispEdges !important;
         }
+        /* Hide Next.js dev overlay elements */
+        nextjs-portal, [data-nextjs-toast], #__next-build-watcher, #next-route-announcer {
+          display: none !important;
+        }
       `
     });
 
