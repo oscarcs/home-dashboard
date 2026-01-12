@@ -184,7 +184,7 @@ const NEWS_SOURCES: NewsSource[] = [
  * Uses Google Gemini to generate a concise summary
  */
 export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
-  constructor(cacheTTLMinutes: number = 120) {
+  constructor(cacheTTLMinutes: number = 30) {
     super({
       name: 'News',
       cacheKey: 'news',
