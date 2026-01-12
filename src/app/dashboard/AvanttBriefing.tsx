@@ -96,6 +96,8 @@ export default function AvanttBriefing({
       'CL=F': 'Crude',
       'GC=F': 'Gold',
       'BTC-USD': 'Bitcoin',
+      'AUDUSD=X': 'AUD/USD',
+      'AUDNZD=X': 'AUD/NZD',
       'ETH-USD': 'Ethereum',
     };
     return mapping[symbol] || symbol;
@@ -262,7 +264,11 @@ export default function AvanttBriefing({
                   </div>
                   <div className="ab-market-label">{getFriendlyMarketName(quote.symbol)}</div>
                   <div className="ab-market-change">
-                    {quote.changePercent > 0 ? '+' : ''}{quote.changePercent.toFixed(1)}%
+                    {['AUDUSD=X', 'AUDNZD=X'].includes(quote.symbol) ? (
+                      quote.price.toFixed(4)
+                    ) : (
+                      <>{quote.changePercent > 0 ? '+' : ''}{quote.changePercent.toFixed(1)}%</>
+                    )}
                   </div>
                 </div>
               ))

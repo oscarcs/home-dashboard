@@ -33,8 +33,8 @@ const DEFAULT_SYMBOLS = [
   { symbol: '^DJI', name: 'Dow Jones' },
   { symbol: '^IXIC', name: 'Nasdaq' },
   { symbol: 'CL=F', name: 'Crude Oil' },
-  { symbol: 'GC=F', name: 'Gold' },
-  { symbol: 'BTC-USD', name: 'Bitcoin' },
+  { symbol: 'AUDUSD=X', name: 'AUD/USD' },
+  { symbol: 'AUDNZD=X', name: 'AUD/NZD' },
 ];
 
 // ============================================================================
@@ -83,8 +83,8 @@ export class MarketsService extends BaseService<MarketsData, MarketsServiceConfi
         quotes.push({
           symbol: result.symbol,
           name: symbolInfo?.name || result.shortName || result.symbol,
-          price: parseFloat(price.toFixed(2)),
-          change: parseFloat(change.toFixed(2)),
+          price: parseFloat(price.toFixed(4)),
+          change: parseFloat(change.toFixed(4)),
           changePercent: parseFloat(changePercent.toFixed(2)),
           currency: result.currency || 'USD',
         });
