@@ -49,12 +49,25 @@ export async function GET(request: NextRequest) {
     await page.setViewport({
       width: displayWidth,
       height: displayHeight,
-      deviceScaleFactor: 4
+      deviceScaleFactor: 1, // 1:1 pixel mapping for e-ink
     });
 
     await page.goto(displayUrl, {
       waitUntil: 'networkidle2',
       timeout: 30000
+    });
+
+    // Force strict pixel rendering
+    await page.addStyleTag({
+      content: `
+        *, *::before, *::after {
+          -webkit-font-smoothing: none !important;
+          -moz-osx-font-smoothing: none !important;
+          font-smooth: never !important;
+          text-rendering: optimizeSpeed !important;
+          shape-rendering: crispEdges !important;
+        }
+      `
     });
 
     // Wait for fonts and icons to load
@@ -69,17 +82,10 @@ export async function GET(request: NextRequest) {
     await browser.close();
     browser = null;
 
-    // Convert to 1-bit black and white PNG for e-paper
+    // Convert to 1-bit black and white PNG for e-paper using simple threshold
     const processedImage = await sharp.default(screenshot)
       .greyscale()
-      .resize(displayWidth, displayHeight, {
-        fit: 'contain',
-        background: { r: 255, g: 255, b: 255 },
-        kernel: sharp.default.kernel.lanczos3
-      })
-      .normalise()
-      .linear(1.2, -(128 * 0.2))
-      .threshold(190)
+      .threshold(128)
       .png({
         palette: true,
         colors: 2,

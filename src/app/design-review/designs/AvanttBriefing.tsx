@@ -122,10 +122,23 @@ export default function AvanttBriefing({
     return diverse;
   };
 
+  const formatRefreshTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   return (
     <div className="ab-container">
       <link rel="stylesheet" href="/styles/fonts/fonts.css" />
       <style>{`:root { --display-width: ${display_width}px; --display-height: ${display_height}px; }`}</style>
+
+      {/* Refresh time indicator */}
+      <div className="ab-refresh-time">
+        <span>↻</span>
+        <span>{formatRefreshTime(date)}</span>
+      </div>
 
       {/* Wrapper with padding to keep dividers away from edges */}
       <div className="ab-wrapper">

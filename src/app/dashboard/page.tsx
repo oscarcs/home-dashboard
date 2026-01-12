@@ -11,7 +11,7 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const headersList = await headers();
-  
+
   // Mock request object for buildDashboardData
   const mockRequest = {
     headers: Object.fromEntries(headersList.entries()),
@@ -19,15 +19,15 @@ export default async function DashboardPage({
   } as any;
 
   const data = await buildDashboardData(mockRequest, console);
-  
+
   // Parse battery level from query param (0-100) if provided
   const batteryParam = params.battery;
-  const battery_level = batteryParam !== undefined 
+  const battery_level = batteryParam !== undefined
     ? (isNaN(parseInt(batteryParam)) ? null : parseInt(batteryParam))
     : null;
 
   // Check if custom fonts exist
-  const customFontsPath = path.join(process.cwd(), 'views/styles/fonts/fonts.css');
+  const customFontsPath = path.join(process.cwd(), 'public/styles/fonts/fonts.css');
   const hasCustomFonts = fs.existsSync(customFontsPath);
 
   // Display dimensions from env

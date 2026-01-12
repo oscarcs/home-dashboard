@@ -8,6 +8,19 @@
   font-family: 'Avantt', sans-serif;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
+}
+
+.ab-refresh-time {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .ab-wrapper {
@@ -264,6 +277,7 @@
   justify-content: space-evenly;
   border-right: 1px solid #000000;
   padding-right: 16px;
+  margin-top: -8px;
 }
 
 .ab-market-item {

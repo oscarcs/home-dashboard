@@ -97,3 +97,17 @@ strong {
   font-size: 12px;
   line-height: 1;
 }
+
+/* Pixel Perfect Text Rendering for 1-bit E-Ink Displays */
+[data-pixel-perfect="true"] {
+  /* Ensure crisp text rendering */
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  text-rendering: geometricPrecision;
+}
+
+.pixel-perfect-line {
+  /* Lines are display:block by default (set via JS) */
+  /* Ensure no sub-pixel positioning */
+  transform: translateZ(0);
+}

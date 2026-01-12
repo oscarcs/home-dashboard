@@ -139,6 +139,7 @@ export interface DashboardData {
   daily_summary: string;
   weather_summary_source?: string;
   news_summary?: string;
+  news_headlines?: NewsHeadline[];
   markets?: MarketsData;
   last_updated: string;
   units: Units;
