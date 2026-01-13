@@ -108,7 +108,7 @@ Multi-location forecasts, hourly data, and astronomy information.
 3. Get your API key
 4. Add to `.env`: `GOOGLE_MAPS_API_KEY=your_key_here`
 
-### Google Calendar (Optional)
+### Google Calendar (Optional, not currently displayed)
 Display upcoming calendar events.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -126,20 +126,11 @@ Display upcoming calendar events.
 8. Visit `http://localhost:7272/admin` and click "Authenticate"
 
 ### LLM (Optional)
-AI-generated insights, using Google Gemini by default (configured in `services/llmService.ts`).
+AI-generated weather and news summaries using Google Gemini.
 
 1. Sign up at [Google AI Studio](https://aistudio.google.com/)
 2. Generate a new API key
 3. Add to `.env`: `GEMINI_API_KEY=your_api_key`
-
-## Technology Stack
-
-- **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript
-- **Styling:** CSS + Tailwind CSS (utility classes)
-- **UI Icons:** Phosphor Icons
-- **Image Processing:** Puppeteer + Sharp (for e-paper generation)
-- **APIs:** Google Weather, Google Calendar, Google Gemini
 
 ## Admin Panel
 
@@ -164,40 +155,6 @@ npm start          # Start production server
 npm run typecheck  # Type check TypeScript
 ```
 
-### Project Structure
-
-```
-src/
-  app/                    # Next.js App Router
-    api/                  # API routes (serverless functions)
-      admin/
-      auth/
-      dashboard/
-      services/
-    admin/                # Admin panel page
-    dashboard/            # Dashboard page
-    layout.tsx            # Root layout
-    page.tsx              # Home page
-  components/             # Reusable React components
-
-lib/                      # Shared utilities
-  BaseService.ts          # Base class for all services
-  dataBuilder.ts          # Data aggregation logic
-  state.ts                # State management
-  types.ts                # TypeScript types
-  utils.ts                # Helper functions
-  weatherUtils.ts         # Weather-specific utilities
-
-services/                 # Data services
-  weatherService.ts       # Google Weather API (required)
-  calendarService.ts      # Google Calendar (optional)
-  llmService.ts           # Gemini AI insights (optional)
-
-public/                   # Static assets
-  styles/                 # CSS files
-  assets/                 # Images, fonts
-```
-
 ### Service Architecture
 
 All data services extend `BaseService` (`lib/BaseService.ts`) which provides:
@@ -215,24 +172,6 @@ All data services extend `BaseService` (`lib/BaseService.ts`) which provides:
 4. **Integrate data:** Add service call in `lib/dataBuilder.ts`
 5. **Update UI:** Modify React components to display the data
 
-### Modifying the Dashboard UI
-
-**React/TypeScript changes:**
-1. Edit `src/app/dashboard/page.tsx` (Server Component)
-2. Edit `src/app/dashboard/DashboardClient.tsx` (Client Component)
-3. Edit styles in component CSS files
-4. Visit `http://localhost:7272/dashboard` to preview
-5. Check `http://localhost:7272/api/dashboard/image` for e-paper output
-
-**Hot reload is enabled** - changes appear immediately in the browser.
-
-### Development Resources
-
-- **`NEXT_MIGRATION.md`** - Migration guide from Express to Next.js
-- **`lib/state.ts`** - Centralized state management (caches in `data/state.json`)
-- **`lib/dataBuilder.ts`** - Data aggregation logic
-- **`src/app/api/`** - API route handlers (Next.js serverless functions)
-
 ## Arduino Setup (E-Paper Display)
 This sketch supports Seeed XIAO ESP32 microcontrollers and reTerminal E Series with 7.5" e-Paper displays. It may require modifications for other hardware.
 
@@ -243,7 +182,6 @@ The sketch fetches the dashboard image from the server every 10 minutes and disp
 
 **Important:** Your server should have a **fixed local IP address** or **local hostname** to ensure the e-paper display can reliably connect to it. If your server's IP changes (due to DHCP), the display won't be able to fetch the dashboard. You can either:
 - Set a static IP in your router's DHCP settings for the server's MAC address
-- Use a local hostname (e.g., `raspberrypi.local`) if your network supports mDNS/Bonjour
 
 ### Flashing Instructions
 
