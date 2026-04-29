@@ -131,6 +131,7 @@ AI-generated weather and news summaries using Google Gemini.
 1. Sign up at [Google AI Studio](https://aistudio.google.com/)
 2. Generate a new API key
 3. Add to `.env`: `GEMINI_API_KEY=your_api_key`
+4. Optional: set `GEMINI_MODEL=gemini-2.5-flash` to override the default model
 
 ## Admin Panel
 

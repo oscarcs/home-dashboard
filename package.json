@@ -31,7 +31,7 @@
   "scripts": {
     "dev": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next dev -p ${port:-7272}",
     "build": "next build",
-    "start": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next start -p ${port:-7272}",
+    "start": "port=$(grep '^PORT=' .env | cut -d '=' -f2); DATA_DIR=${DATA_DIR:-$(pwd)/data} PORT=${port:-7272} node .next/standalone/server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
