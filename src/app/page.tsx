@@ -7,7 +7,7 @@ export default function HomePage() {
         Home Dashboard
       </h1>
       <p style={{ marginBottom: '2rem', color: '#666' }}>
-        E-Paper home dashboard for weather, calendar, and more
+        E-Paper home dashboard for weather, news, markets, and more
       </p>
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <Link

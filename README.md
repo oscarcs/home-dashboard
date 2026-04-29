@@ -5,7 +5,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16.1-black)](https://nextjs.org/)
 [![Status](https://img.shields.io/badge/status-production-success)](https://github.com/oscarcs/home-dashboard)
 
-A modern home dashboard built with Next.js that runs on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and displays weather forecasts, calendar events, and AI-generated insights.
+A modern home dashboard built with Next.js that runs on a local network computer (Raspberry Pi, Mac Mini, or any always-on machine) and displays weather forecasts, news, markets, and AI-generated insights.
 
 ## Getting Started
 
@@ -108,23 +108,6 @@ Multi-location forecasts, hourly data, and astronomy information.
 3. Get your API key
 4. Add to `.env`: `GOOGLE_MAPS_API_KEY=your_key_here`
 
-### Google Calendar (Optional, not currently displayed)
-Display upcoming calendar events.
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use existing)
-3. Enable the **Google Calendar API**
-4. Create **OAuth 2.0 credentials** (Web application type)
-5. Add authorized redirect URI: `/auth/google/callback`
-6. Download client ID and secret
-7. Add to `.env`:
-   ```bash
-   GOOGLE_CLIENT_ID=your_client_id
-   GOOGLE_CLIENT_SECRET=your_client_secret
-   GOOGLE_REDIRECT_URI=http://localhost:7272/api/auth/google/callback # If you change the port, you must update this
-   ```
-8. Visit `http://localhost:7272/admin` and click "Authenticate"
-
 ### LLM (Optional)
 AI-generated weather and news summaries using Google Gemini.
 
@@ -137,14 +120,11 @@ AI-generated weather and news summaries using Google Gemini.
 
 Visit `http://localhost:7272/admin` to:
 
-- **Authenticate with Google Calendar** - One-click OAuth flow
 - **Monitor service status** - See which APIs are working
-
-OAuth tokens are stored in `data/auth.json` and persist across restarts.
 
 ## Developing
 
-This project is built with **Next.js 16**. Each service (weather, calendar, etc.) is implemented as a separate TypeScript class that builds to a single data object sent to the dashboard.
+This project is built with **Next.js 16**. Each service (weather, news, markets, etc.) is implemented as a separate TypeScript class that builds to a single data object sent to the dashboard.
 
 ### Development Commands
 

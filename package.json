@@ -21,7 +21,6 @@
     "weather",
     "iot",
     "home-automation",
-    "calendar",
     "esp32",
     "arduino"
   ],
@@ -30,7 +29,7 @@
   },
   "scripts": {
     "dev": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next dev -p ${port:-7272}",
-    "build": "next build",
+    "build": "next build && mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public",
     "start": "port=$(grep '^PORT=' .env | cut -d '=' -f2); DATA_DIR=${DATA_DIR:-$(pwd)/data} PORT=${port:-7272} node .next/standalone/server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
@@ -41,7 +40,6 @@
     "@tailwindcss/postcss": "^4.1.18",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
-    "googleapis": "^131.0.0",
     "next": "^16.1.1",
     "puppeteer": "^24.23.0",
     "react": "^19.2.3",

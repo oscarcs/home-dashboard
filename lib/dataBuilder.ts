@@ -1,11 +1,9 @@
 // @ts-nocheck - Services are not yet converted to TypeScript
 import { WeatherService } from '../services/weatherService';
-import { CalendarService } from '../services/calendarService';
 import { NewsService } from '../services/newsService';
 import { MarketsService } from '../services/marketsService';
 import { getStateKey, setStateKey } from './state';
 import { buildStaticDescription, getWindDirection } from './weatherUtils';
-import { getBaseUrl } from './utils';
 import type {
   DashboardData,
   Logger,
@@ -15,7 +13,6 @@ import type {
   CurrentWeather,
   WindData,
   PrecipitationData,
-  CalendarEvent,
   ServiceStatus,
   Units,
   NewsData,
@@ -52,7 +49,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 
   // Initialize all services (each service defines its own cache TTL)
   const weatherService = new WeatherService();
-  const calendarService = new CalendarService();
   const newsService = new NewsService();
   const marketsService = new MarketsService();
 
@@ -80,24 +76,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 
   // Use WeatherAPI for precipitation
   const precipitation = normalizePrecipitationData(weatherData.precipitation);
-
-  // Fetch calendar (optional)
-  let calendar_events: CalendarEvent[] = [];
-  let calendarStatus: ServiceStatus;
-  try {
-    const baseUrl = getBaseUrl(req);
-    const calendarConfig = {
-      baseUrl,
-      timezone: weatherData.timezone,
-    };
-    const result = await calendarService.getData(calendarConfig, logger);
-    calendar_events = result.data || [];
-    calendarStatus = result.status;
-  } catch (error) {
-    const err = error as Error;
-    logger.info?.('[DataBuilder] Calendar service unavailable (optional):', err.message);
-    calendarStatus = calendarService.getStatus();
-  }
 
   // Fetch news (optional)
   let news_summary = '';
@@ -166,7 +144,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     visibility: weatherData.visibility,
     cloud_cover: weatherData.cloud_cover,
     precipitation,
-    calendar_events,
     daily_summary: '',
     news_summary,
     news_headlines,
@@ -207,7 +184,6 @@ export async function buildDashboardData(req: { headers: Record<string, string |
   // Attach service statuses for admin panel
   data._serviceStatuses = {
     weather: weatherStatus,
-    calendar: calendarStatus,
     news: newsStatus,
     markets: marketsStatus,
   };
@@ -223,14 +199,12 @@ export async function buildDashboardData(req: { headers: Record<string, string |
 export function getServiceStatuses(): Record<string, ServiceStatus> {
   // Instantiate services to get their TTL values
   const weatherService = new WeatherService();
-  const calendarService = new CalendarService();
   const newsService = new NewsService();
   const marketsService = new MarketsService();
 
   // Service definitions
   const serviceConfigs: Record<string, { service: any }> = {
     weather: { service: weatherService },
-    calendar: { service: calendarService },
     news: { service: newsService },
     markets: { service: marketsService },
   };

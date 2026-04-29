@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Home Dashboard',
-  description: 'E-Paper home dashboard for weather, calendar, and more',
+  description: 'E-Paper home dashboard for weather, news, markets, and more',
 };
 
 export default function RootLayout({

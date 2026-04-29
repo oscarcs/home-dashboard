@@ -17,7 +17,7 @@ body {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 520px);
   gap: 32px;
   align-items: start;
 }
@@ -93,40 +93,6 @@ button:disabled {
 
 .btn-small {
   padding: 6px 12px;
-  font-size: 12px;
-}
-
-/* Auth Status */
-.auth-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-/* Calendar Items */
-.calendar-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.calendar-item:last-child {
-  border-bottom: none;
-}
-
-.calendar-item input[type="checkbox"] {
-  margin: 0;
-}
-
-.calendar-name {
-  flex: 1;
-}
-
-.calendar-primary {
-  color: #059669;
   font-size: 12px;
 }
 

@@ -25,7 +25,7 @@ Assume during development that the dev server is already running and accessible 
 - **Data Flow**: `services/` -> `lib/dataBuilder.ts` -> Dashboard UI -> Image API.
 - **Service Pattern**: Extend `BaseService.ts` for caching and error handling.
 - **State**: Persistent state stored in `data/state.json`.
-- **Environment**: API keys in `.env` (Google Weather/Calendar, Gemini).
+- **Environment**: API keys in `.env` (Google Weather, Gemini).
 
 ## E-Ink Restrictions
 - **Resolution**: 800x480 (standard 7.5").

@@ -103,15 +103,6 @@ export interface PrecipitationData {
 }
 
 // ----------------------------------------------------------------------------
-// Calendar Types
-// ----------------------------------------------------------------------------
-
-export interface CalendarEvent {
-  title: string;
-  time: string;
-}
-
-// ----------------------------------------------------------------------------
 // Dashboard Data Model
 // ----------------------------------------------------------------------------
 
@@ -135,7 +126,6 @@ export interface DashboardData {
   visibility: number;
   cloud_cover: number;
   precipitation: PrecipitationData;
-  calendar_events: CalendarEvent[];
   daily_summary: string;
   weather_summary_source?: string;
   news_summary?: string;
@@ -145,7 +135,6 @@ export interface DashboardData {
   units: Units;
   _serviceStatuses?: {
     weather: ServiceStatus;
-    calendar: ServiceStatus;
     news: ServiceStatus;
     markets: ServiceStatus;
   };

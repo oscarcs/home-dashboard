@@ -23,7 +23,6 @@ export default function TestServicesPage() {
   const services = [
     { id: 'news', name: 'News Service', description: 'Scrapes headlines and generates AI summary' },
     { id: 'weather', name: 'Weather Service', description: 'Fetches weather data and generates AI insights' },
-    { id: 'calendar', name: 'Calendar Service', description: 'Fetches Google Calendar events' },
     { id: 'markets', name: 'Markets Service', description: 'Fetches real-time market data from Yahoo Finance' },
   ];
 

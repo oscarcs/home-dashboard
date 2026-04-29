@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WeatherService } from '@/services/weatherService';
-import { CalendarService } from '@/services/calendarService';
 import { NewsService } from '@/services/newsService';
 import { MarketsService } from '@/services/marketsService';
 
@@ -10,11 +9,10 @@ import { MarketsService } from '@/services/marketsService';
  * Usage:
  * - GET /api/test-service?service=news&fresh=true
  * - GET /api/test-service?service=weather&fresh=true
- * - GET /api/test-service?service=calendar
  * - GET /api/test-service?service=markets&fresh=true
  *
  * Query params:
- * - service: which service to test (news, weather, calendar, markets)
+ * - service: which service to test (news, weather, markets)
  * - fresh: if true, clears cache before fetching
  */
 export async function GET(request: NextRequest) {
@@ -29,7 +27,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         error: 'Missing service parameter',
         usage: 'GET /api/test-service?service=news&fresh=true',
-        availableServices: ['news', 'weather', 'calendar', 'markets']
+        availableServices: ['news', 'weather', 'markets']
       }, { status: 400 });
     }
 
@@ -49,16 +47,6 @@ export async function GET(request: NextRequest) {
         serviceFriendlyName = 'Weather Service (includes AI insights)';
         break;
 
-      case 'calendar':
-        service = new CalendarService();
-        serviceFriendlyName = 'Calendar Service';
-        const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-        config = {
-          baseUrl,
-          timezone: 'UTC'
-        };
-        break;
-
       case 'markets':
         service = new MarketsService();
         serviceFriendlyName = 'Markets Service';
@@ -67,7 +55,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({
           error: `Unknown service: ${serviceName}`,
-          availableServices: ['news', 'weather', 'calendar', 'markets']
+          availableServices: ['news', 'weather', 'markets']
         }, { status: 400 });
     }
 
