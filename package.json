@@ -31,29 +31,31 @@
     "dev": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next dev -p ${port:-7272}",
     "build": "next build && mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public",
     "start": "port=$(grep '^PORT=' .env | cut -d '=' -f2); DATA_DIR=${DATA_DIR:-$(pwd)/data} PORT=${port:-7272} node .next/standalone/server.js",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@phosphor-icons/react": "^2.1.10",
-    "@tailwindcss/postcss": "^4.1.18",
-    "axios": "^1.7.7",
-    "dotenv": "^16.4.5",
-    "next": "^16.1.1",
-    "puppeteer": "^24.23.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "sharp": "^0.34.4",
-    "yahoo-finance2": "^3.11.2"
+    "@tailwindcss/postcss": "^4.2.4",
+    "axios": "^1.15.2",
+    "dotenv": "^17.4.2",
+    "next": "^16.2.4",
+    "puppeteer": "^24.42.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "sharp": "^0.34.5",
+    "yahoo-finance2": "^3.14.0"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3",
-    "@types/react": "^19.2.7",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.4",
+    "postcss": "^8.5.12",
+    "tailwindcss": "^4.2.4",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }

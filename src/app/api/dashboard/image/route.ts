@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
 
     // Log page errors
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+    page.on('pageerror', err => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.log('PAGE ERROR:', message);
+    });
 
     await page.setViewport({
       width: displayWidth,

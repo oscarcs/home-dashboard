@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     let service: any;
-    let config: any = {};
+    const config: any = {};
     let serviceFriendlyName = '';
 
     // Initialize the requested service
