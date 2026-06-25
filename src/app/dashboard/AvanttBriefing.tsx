@@ -41,6 +41,7 @@ export default function AvanttBriefing({
     daily_summary,
     news_summary,
     news_headlines,
+    news_display_headlines,
     markets,
     units,
   } = data;
@@ -105,6 +106,7 @@ export default function AvanttBriefing({
     if (lower.includes('abc')) return 'ABC';
     if (lower.includes('rnz')) return 'RNZ';
     if (lower.includes('bbc')) return 'BBC';
+    if (lower.includes('yle')) return 'YLE';
     if (lower.includes('cnn')) return 'CNN';
     if (lower.includes('reuters')) return 'REU';
     if (lower.includes('guardian')) return 'GDN';
@@ -114,11 +116,19 @@ export default function AvanttBriefing({
   };
 
   const getDiverseHeadlines = () => {
-    if (!news_headlines || news_headlines.length === 0) return [];
+    const candidateHeadlines = news_display_headlines && news_display_headlines.length > 0
+      ? news_display_headlines
+      : news_headlines;
+
+    if (!candidateHeadlines || candidateHeadlines.length === 0) return [];
+    if (news_display_headlines && news_display_headlines.length > 0) {
+      return news_display_headlines.slice(0, 4);
+    }
+
     const seenSources = new Set<string>();
-    const diverse: typeof news_headlines = [];
+    const diverse: typeof candidateHeadlines = [];
     // First pass: get one from each unique source
-    for (const headline of news_headlines) {
+    for (const headline of candidateHeadlines) {
       if (!seenSources.has(headline.source)) {
         diverse.push(headline);
         seenSources.add(headline.source);
@@ -127,7 +137,7 @@ export default function AvanttBriefing({
     }
     // Second pass: fill remaining slots if needed
     if (diverse.length < 4) {
-      for (const headline of news_headlines) {
+      for (const headline of candidateHeadlines) {
         if (!diverse.includes(headline)) {
           diverse.push(headline);
           if (diverse.length >= 4) break;

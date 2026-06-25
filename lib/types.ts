@@ -130,6 +130,7 @@ export interface DashboardData {
   weather_summary_source?: string;
   news_summary?: string;
   news_headlines?: NewsHeadline[];
+  news_display_headlines?: NewsHeadline[];
   markets?: MarketsData;
   last_updated: string;
   units: Units;
@@ -222,6 +223,7 @@ export interface NewsHeadline {
 
 export interface NewsData {
   headlines: NewsHeadline[];
+  displayHeadlines?: NewsHeadline[];
   summary: string;
 }
 

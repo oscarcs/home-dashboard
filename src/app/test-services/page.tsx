@@ -89,6 +89,27 @@ export default function TestServicesPage() {
             </div>
           </div>
 
+          {data.displayHeadlines && data.displayHeadlines.length > 0 && (
+            <div style={{ marginBottom: '12px' }}>
+              <strong>Display Headlines ({data.displayHeadlines.length}):</strong>
+              <div style={{ marginTop: '8px' }}>
+                {data.displayHeadlines.map((h: any, i: number) => (
+                  <div key={i} style={{
+                    padding: '8px',
+                    borderLeft: '3px solid #2563eb',
+                    marginBottom: '8px',
+                    fontSize: '13px'
+                  }}>
+                    <div style={{ color: '#6b7280', fontSize: '11px', marginBottom: '4px' }}>
+                      {h.source}
+                    </div>
+                    {h.title}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ marginBottom: '12px' }}>
             <strong>Headlines ({data.headlines?.length || 0}):</strong>
             <div style={{ marginTop: '8px' }}>
@@ -115,6 +136,14 @@ export default function TestServicesPage() {
               <div>Input tokens: {data._meta.input_tokens}</div>
               <div>Output tokens: {data._meta.output_tokens}</div>
               <div>API cost: ${data._meta.cost_usd.toFixed(5)}</div>
+              {data._meta.selectionReasons && (
+                <div style={{ marginTop: '8px' }}>
+                  <strong>Selection reasons:</strong>
+                  {Object.entries(data._meta.selectionReasons).map(([id, reason]) => (
+                    <div key={id}>{id}: {String(reason)}</div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

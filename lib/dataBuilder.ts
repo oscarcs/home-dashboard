@@ -80,6 +80,7 @@ export async function buildDashboardData(req: { headers: Record<string, string |
   // Fetch news (optional)
   let news_summary = '';
   let news_headlines: { source: string; title: string }[] = [];
+  let news_display_headlines: { source: string; title: string }[] = [];
   let newsStatus: ServiceStatus;
   try {
     const result = await newsService.getData({}, logger);
@@ -93,9 +94,13 @@ export async function buildDashboardData(req: { headers: Record<string, string |
       if (newsData.headlines && newsData.headlines.length > 0) {
         news_headlines = newsData.headlines;
       }
+      if (newsData.displayHeadlines && newsData.displayHeadlines.length > 0) {
+        news_display_headlines = newsData.displayHeadlines;
+      }
       logger.info?.('[DataBuilder] News data retrieved:', {
         hasHeadlines: news_headlines.length > 0,
-        headlineCount: news_headlines.length
+        headlineCount: news_headlines.length,
+        displayHeadlineCount: news_display_headlines.length
       });
     }
   } catch (error) {
@@ -147,6 +152,7 @@ export async function buildDashboardData(req: { headers: Record<string, string |
     daily_summary: '',
     news_summary,
     news_headlines,
+    news_display_headlines,
     markets,
     last_updated: formatTime(now),
     units: weatherData.units,
