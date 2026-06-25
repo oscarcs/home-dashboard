@@ -164,6 +164,7 @@ export async function buildDashboardData(req: { headers: Record<string, string |
       data._ai_cost = {
         total_tokens: aiCostInfo.last_call.total_tokens,
         cost_usd: aiCostInfo.last_call.cost_usd,
+        provider: aiCostInfo.last_call.provider,
         prompt: aiCostInfo.last_call.prompt,
         monthly_cost_usd: aiCostInfo.projections.monthly_cost_usd,
       };

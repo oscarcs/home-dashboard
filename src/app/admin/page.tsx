@@ -26,6 +26,7 @@ interface AICostInfo {
   last_call: {
     total_tokens: number;
     cost_usd: number;
+    provider?: string;
     prompt?: string;
   };
   projections: {
@@ -151,7 +152,8 @@ export default function AdminPage() {
                           >
                             AI: {aiCost.last_call.total_tokens} tokens
                           </span>
-                          . Cost: ${aiCost.last_call.cost_usd.toFixed(4)}, est. $
+                          {aiCost.last_call.provider && ` via ${aiCost.last_call.provider}`}
+                          . API cost: ${aiCost.last_call.cost_usd.toFixed(4)}, est. $
                           {aiCost.projections.monthly_cost_usd.toFixed(2)}/mo
                         </div>
                       )}

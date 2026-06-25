@@ -12,6 +12,8 @@ import type {
  * Base class for all services with built-in caching, retry logic, and status tracking
  */
 export abstract class BaseService<TData = unknown, TConfig = Record<string, unknown>> {
+  private static inFlight = new Map<string, Promise<ServiceDataResult<unknown>>>();
+
   protected name: string;
   protected cacheKey: string;
   protected cacheTTL: number;
@@ -199,6 +201,39 @@ export abstract class BaseService<TData = unknown, TConfig = Record<string, unkn
       };
     }
 
+    return this.getFreshDataSingleFlight(config, logger, cacheSignature);
+  }
+
+  private async getFreshDataSingleFlight(
+    config: TConfig,
+    logger: Logger,
+    cacheSignature: string | null
+  ): Promise<ServiceDataResult<TData>> {
+    const inFlightKey = `${this.cacheKey}:${cacheSignature || ''}`;
+    const existing = BaseService.inFlight.get(inFlightKey) as Promise<ServiceDataResult<TData>> | undefined;
+
+    if (existing) {
+      logger.info?.(`[${this.name}] Waiting for in-flight fetch`);
+      return existing;
+    }
+
+    const fetchPromise = this.fetchFreshData(config, logger, cacheSignature);
+    BaseService.inFlight.set(inFlightKey, fetchPromise as Promise<ServiceDataResult<unknown>>);
+
+    try {
+      return await fetchPromise;
+    } finally {
+      if (BaseService.inFlight.get(inFlightKey) === fetchPromise) {
+        BaseService.inFlight.delete(inFlightKey);
+      }
+    }
+  }
+
+  private async fetchFreshData(
+    config: TConfig,
+    logger: Logger,
+    cacheSignature: string | null
+  ): Promise<ServiceDataResult<TData>> {
     // Attempt to fetch with retries
     let lastError: Error | undefined;
     for (let attempt = 0; attempt < this.retryAttempts; attempt++) {

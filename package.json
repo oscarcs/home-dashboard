@@ -29,7 +29,7 @@
   },
   "scripts": {
     "dev": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next dev -p ${port:-7272}",
-    "build": "next build && mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public",
+    "build": "next build && mkdir -p .next/standalone/.next && rm -rf .next/standalone/.next/static .next/standalone/public && cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public && node scripts/copy-standalone-native-deps.mjs",
     "start": "port=$(grep '^PORT=' .env | cut -d '=' -f2); DATA_DIR=${DATA_DIR:-$(pwd)/data} PORT=${port:-7272} node .next/standalone/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

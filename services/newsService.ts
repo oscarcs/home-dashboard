@@ -1,5 +1,7 @@
 import { BaseService } from '../lib/BaseService';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateCodexJSON, getLLMProvider, getLLMSignature, isConfiguredLLMProvider } from '../lib/codexLLM';
+import { findPuppeteerExecutable } from '../lib/puppeteerExecutable';
 import type { Logger } from '../lib/types';
 import type { Browser } from 'puppeteer';
 
@@ -29,6 +31,7 @@ interface NewsData {
     input_tokens: number;
     output_tokens: number;
     cost_usd: number;
+    provider?: string;
     scrapedAt: number;
   };
 }
@@ -181,7 +184,7 @@ const NEWS_SOURCES: NewsSource[] = [
 /**
  * News Service - Scrapes top headlines and generates AI summary
  * Uses Puppeteer to scrape BBC, ABC News (AU), and RNZ
- * Uses Google Gemini to generate a concise summary
+ * Uses the configured LLM provider to generate a concise summary
  */
 export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
   constructor(cacheTTLMinutes: number = 30) {
@@ -195,47 +198,22 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
   }
 
   isEnabled(): boolean {
-    const apiKey = process.env.GEMINI_API_KEY;
-    return !!apiKey;
+    return true;
+  }
+
+  protected getCacheSignature(_config: NewsServiceConfig): string {
+    return getLLMSignature();
   }
 
   async fetchData(_config: NewsServiceConfig, logger: Logger): Promise<NewsData> {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
-
     let browser: Browser | null = null;
 
     try {
       // Import puppeteer dynamically
       const puppeteer = await import('puppeteer');
-      const fs = await import('fs');
       const os = await import('os');
-
-      // Detect system Chrome path based on platform
-      let executablePath: string | undefined = undefined;
       const platform = os.platform();
-
-      if (platform === 'darwin') {
-        // macOS
-        const macPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-        if (fs.existsSync(macPath)) {
-          executablePath = macPath;
-        }
-      } else if (platform === 'linux') {
-        // Linux - try common paths
-        const linuxPaths = [
-          '/usr/bin/google-chrome',
-          '/usr/bin/google-chrome-stable',
-          '/usr/bin/chromium-browser',
-          '/usr/bin/chromium',
-        ];
-        for (const path of linuxPaths) {
-          if (fs.existsSync(path)) {
-            executablePath = path;
-            break;
-          }
-        }
-      }
+      const executablePath = findPuppeteerExecutable();
 
       logger.info?.(`[News] Launching browser for scraping (platform: ${platform})...`);
       browser = await puppeteer.launch({
@@ -284,24 +262,29 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
 
       logger.info?.(`[News] Total headlines scraped: ${allHeadlines.length}`);
 
-      // Generate AI summary using Gemini
-      logger.info?.('[News] Generating AI summary...');
       let summaryText = '';
       let summaryMeta = undefined;
 
-      try {
-        const summary = await this.generateSummary(allHeadlines, apiKey);
-        summaryText = summary.text;
-        summaryMeta = {
-          input_tokens: summary.inputTokens,
-          output_tokens: summary.outputTokens,
-          cost_usd: summary.cost,
-          scrapedAt: Date.now()
-        };
-        logger.info?.(`[News] AI summary generated: "${summaryText}"`);
-      } catch (summaryError) {
-        logger.warn?.('[News] AI summary generation failed:', summaryError);
-        // Continue with empty summary rather than failing the whole service
+      if (isConfiguredLLMProvider()) {
+        // Generate AI summary using the configured LLM provider.
+        logger.info?.('[News] Generating AI summary...');
+        try {
+          const summary = await this.generateSummary(allHeadlines);
+          summaryText = summary.text;
+          summaryMeta = {
+            input_tokens: summary.inputTokens,
+            output_tokens: summary.outputTokens,
+            cost_usd: summary.cost,
+            provider: summary.provider,
+            scrapedAt: Date.now()
+          };
+          logger.info?.(`[News] AI summary generated: "${summaryText}"`);
+        } catch (summaryError) {
+          logger.warn?.('[News] AI summary generation failed:', summaryError);
+          // Continue with empty summary rather than failing the whole service
+        }
+      } else {
+        logger.info?.('[News] No LLM provider configured; skipping AI summary');
       }
 
       return {
@@ -322,9 +305,48 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
   }
 
   async generateSummary(
-    headlines: NewsHeadline[],
+    headlines: NewsHeadline[]
+  ): Promise<{ text: string; inputTokens: number; outputTokens: number; cost: number; provider: string }> {
+    const { systemPrompt, userMessage } = this.buildSummaryPrompt(headlines);
+    const provider = getLLMProvider();
+
+    if (provider === 'codex') {
+      const result = await generateCodexJSON<{ summary: string }>({
+        prompt: `${systemPrompt}\n\n${userMessage}`,
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            summary: {
+              type: 'string',
+              minLength: 40,
+              maxLength: 90,
+            },
+          },
+          required: ['summary'],
+        },
+      });
+
+      return {
+        text: result.data.summary,
+        inputTokens: result.tokensUsed || 0,
+        outputTokens: 0,
+        cost: 0,
+        provider: `codex:${result.model}`,
+      };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+    return this.generateGeminiSummary(systemPrompt, userMessage, apiKey);
+  }
+
+  private async generateGeminiSummary(
+    systemPrompt: string,
+    userMessage: string,
     apiKey: string
-  ): Promise<{ text: string; inputTokens: number; outputTokens: number; cost: number }> {
+  ): Promise<{ text: string; inputTokens: number; outputTokens: number; cost: number; provider: string }> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
@@ -333,6 +355,61 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
       }
     });
 
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
+    });
+
+    const response = await result.response;
+
+    // Check if response was blocked
+    const candidate = response.candidates?.[0];
+    if (candidate?.finishReason === 'SAFETY' || candidate?.finishReason === 'RECITATION') {
+      throw new Error(`Gemini blocked response: ${candidate.finishReason}`);
+    }
+
+    const text = response.text();
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Gemini returned empty response');
+    }
+
+    console.log('[News] Raw Gemini response:', text);
+
+    try {
+      let parsed = JSON.parse(text);
+
+      // Handle if Gemini returns an array instead of object
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        parsed = parsed[0];
+      }
+
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Response is not a valid object');
+      }
+
+      if (!parsed.summary) {
+        throw new Error('Response JSON missing "summary" field');
+      }
+
+      // Cost calculation for Gemini 2 Flash
+      const inputTokens = response.usageMetadata?.promptTokenCount || 0;
+      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
+      const cost = (inputTokens * 0.1 / 1000000) + (outputTokens * 0.4 / 1000000);
+
+      return {
+        text: parsed.summary,
+        inputTokens,
+        outputTokens,
+        cost,
+        provider: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      };
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+      throw new Error(`Failed to parse Gemini response: ${errorMsg}. Raw text: ${text.substring(0, 200)}`);
+    }
+  }
+
+  private buildSummaryPrompt(headlines: NewsHeadline[]): { systemPrompt: string; userMessage: string } {
     // Group headlines by source
     const headlinesBySources = headlines.reduce((acc, h) => {
       if (!acc[h.source]) acc[h.source] = [];
@@ -381,57 +458,7 @@ ${headlinesText}
 
 Generate a concise summary of the most important news stories.`;
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
-    });
-
-    const response = await result.response;
-
-    // Check if response was blocked
-    const candidate = response.candidates?.[0];
-    if (candidate?.finishReason === 'SAFETY' || candidate?.finishReason === 'RECITATION') {
-      throw new Error(`Gemini blocked response: ${candidate.finishReason}`);
-    }
-
-    const text = response.text();
-
-    if (!text || text.trim().length === 0) {
-      throw new Error('Gemini returned empty response');
-    }
-
-    console.log('[News] Raw Gemini response:', text);
-
-    try {
-      let parsed = JSON.parse(text);
-
-      // Handle if Gemini returns an array instead of object
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        parsed = parsed[0];
-      }
-
-      if (!parsed || typeof parsed !== 'object') {
-        throw new Error('Response is not a valid object');
-      }
-
-      if (!parsed.summary) {
-        throw new Error('Response JSON missing "summary" field');
-      }
-
-      // Cost calculation for Gemini 2 Flash
-      const inputTokens = response.usageMetadata?.promptTokenCount || 0;
-      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
-      const cost = (inputTokens * 0.1 / 1000000) + (outputTokens * 0.4 / 1000000);
-
-      return {
-        text: parsed.summary,
-        inputTokens,
-        outputTokens,
-        cost
-      };
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
-      throw new Error(`Failed to parse Gemini response: ${errorMsg}. Raw text: ${text.substring(0, 200)}`);
-    }
+    return { systemPrompt, userMessage };
   }
 
   mapToDashboard(apiData: NewsData, _config: NewsServiceConfig): NewsData {

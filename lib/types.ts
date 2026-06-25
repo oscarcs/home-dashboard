@@ -141,6 +141,7 @@ export interface DashboardData {
   _ai_cost?: {
     total_tokens: number;
     cost_usd: number;
+    provider?: string;
     prompt: string;
     monthly_cost_usd: number;
   };

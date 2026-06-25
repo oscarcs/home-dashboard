@@ -1,7 +1,7 @@
 # Home Dashboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.9.0-brightgreen)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16.1-black)](https://nextjs.org/)
 [![Status](https://img.shields.io/badge/status-production-success)](https://github.com/oscarcs/home-dashboard)
 
@@ -12,7 +12,7 @@ A modern home dashboard built with Next.js that runs on a local network computer
 This dashboard is built with **Next.js 16** using the App Router, React Server Components, and TypeScript. It's designed to run as a persistent service on an always-on computer within your local network.
 
 ### Prerequisites
-- **Node.js** (v16 or higher)
+- **Node.js** (v20.9 or higher)
 - **npm** (comes with Node.js)
 - An always-on computer on your local network
 
@@ -109,7 +109,21 @@ Multi-location forecasts, hourly data, and astronomy information.
 4. Add to `.env`: `GOOGLE_MAPS_API_KEY=your_key_here`
 
 ### LLM (Optional)
-AI-generated weather and news summaries using Google Gemini.
+AI-generated weather and news summaries. Set `LLM_PROVIDER` in `.env`:
+
+- `LLM_PROVIDER=codex` uses the local `codex exec` CLI and your Codex/ChatGPT plan.
+- `LLM_PROVIDER=gemini` uses Google Gemini API credits.
+- `LLM_PROVIDER=none` disables AI summaries and uses static fallbacks where available.
+
+For Codex:
+
+1. Install and authenticate the Codex CLI on the server user account that runs the app.
+2. Optional: set `CODEX_BIN=/absolute/path/to/codex` if `codex` is not on the service `PATH`.
+3. Optional: tune `CODEX_LLM_MODEL`, `CODEX_LLM_REASONING_EFFORT`, and `CODEX_LLM_TIMEOUT_MS`.
+
+The default Codex model is `gpt-5.4-mini` with low reasoning effort. Codex still includes its own agent instructions internally, so this is plan-backed rather than token-free.
+
+For Gemini:
 
 1. Sign up at [Google AI Studio](https://aistudio.google.com/)
 2. Generate a new API key

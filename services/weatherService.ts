@@ -2,6 +2,7 @@ import axios from 'axios';
 import { BaseService } from '../lib/BaseService';
 import { mapIconAndDescription } from '../lib/weatherUtils';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateCodexJSON, getLLMProvider, getLLMSignature, isConfiguredLLMProvider } from '../lib/codexLLM';
 import type {
   Logger,
   WeatherLocation,
@@ -169,6 +170,7 @@ interface WeatherDashboardData {
     input_tokens: number;
     output_tokens: number;
     cost_usd: number;
+    provider?: string;
     prompt: string;
   };
 }
@@ -219,7 +221,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
 
   getCacheSignature(_?: WeatherServiceConfig): string {
     const locations = this.getConfiguredLocations();
-    return JSON.stringify({ locations });
+    return JSON.stringify({ locations, llm: getLLMSignature() });
   }
 
   isEnabled(): boolean {
@@ -490,11 +492,10 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       }
     };
 
-    // Optionally generate AI insights if Gemini API key is available
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (geminiApiKey) {
+    // Optionally generate AI insights if an LLM provider is configured.
+    if (isConfiguredLLMProvider()) {
       try {
-        const aiInsights = await this.generateAIInsights(baseData, geminiApiKey);
+        const aiInsights = await this.generateAIInsights(baseData);
         baseData.daily_summary = aiInsights.summary;
         baseData._ai_meta = aiInsights.meta;
       } catch (error) {
@@ -511,9 +512,51 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
   // ============================================================================
 
   private async generateAIInsights(
-    weatherData: WeatherDashboardData,
+    weatherData: WeatherDashboardData
+  ): Promise<{ summary: string; meta: { input_tokens: number; output_tokens: number; cost_usd: number; provider?: string; prompt: string } }> {
+    const { systemPrompt, userMessage } = this.buildPrompt(weatherData);
+    const provider = getLLMProvider();
+
+    if (provider === 'codex') {
+      const result = await generateCodexJSON<{ daily_summary: string }>({
+        prompt: `${systemPrompt}\n\n${userMessage}`,
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            daily_summary: {
+              type: 'string',
+              minLength: 40,
+              maxLength: 90,
+            },
+          },
+          required: ['daily_summary'],
+        },
+      });
+
+      return {
+        summary: result.data.daily_summary || "",
+        meta: {
+          input_tokens: result.tokensUsed || 0,
+          output_tokens: 0,
+          cost_usd: 0,
+          provider: `codex:${result.model}`,
+          prompt: userMessage,
+        }
+      };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+    return this.generateGeminiInsights(systemPrompt, userMessage, apiKey);
+  }
+
+  private async generateGeminiInsights(
+    systemPrompt: string,
+    userMessage: string,
     apiKey: string
-  ): Promise<{ summary: string; meta: { input_tokens: number; output_tokens: number; cost_usd: number; prompt: string } }> {
+  ): Promise<{ summary: string; meta: { input_tokens: number; output_tokens: number; cost_usd: number; provider?: string; prompt: string } }> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
@@ -521,8 +564,6 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         responseMimeType: "application/json",
       }
     });
-
-    const { systemPrompt, userMessage } = this.buildPrompt(weatherData);
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
@@ -544,6 +585,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         cost_usd: cost,
+        provider: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
         prompt: userMessage,
       }
     };
@@ -767,11 +809,11 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
   /**
    * Get AI cost information from cached data
    */
-  getAICostInfo(): { last_call: { total_tokens: number; cost_usd: number; prompt: string }; projections: { monthly_cost_usd: number } } | null {
+  getAICostInfo(): { last_call: { total_tokens: number; cost_usd: number; provider?: string; prompt: string }; projections: { monthly_cost_usd: number } } | null {
     const cached = this.getCache(true) as WeatherDashboardData | null;
     if (!cached || !cached._ai_meta) return null;
 
-    const { input_tokens, output_tokens, cost_usd, prompt } = cached._ai_meta;
+    const { input_tokens, output_tokens, cost_usd, provider, prompt } = cached._ai_meta;
 
     // Calculate projected costs based on cache TTL
     const cacheTTLHours = this.cacheTTL / (1000 * 60 * 60);
@@ -783,6 +825,7 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
       last_call: {
         total_tokens: input_tokens + output_tokens,
         cost_usd,
+        provider,
         prompt,
       },
       projections: {

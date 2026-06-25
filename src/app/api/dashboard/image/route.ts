@@ -1,4 +1,5 @@
 import { setStateKey } from '@/lib/state';
+import { findPuppeteerExecutable } from '@/lib/puppeteerExecutable';
 import { NextRequest, NextResponse } from 'next/server';
 import type { Browser } from 'puppeteer';
 
@@ -8,7 +9,6 @@ export async function GET(request: NextRequest) {
   try {
     const puppeteer = await import('puppeteer');
     const sharp = await import('sharp');
-    const fs = await import('fs');
     const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
     // Get display dimensions from env
@@ -21,15 +21,13 @@ export async function GET(request: NextRequest) {
       ? `${baseUrl}/dashboard?battery=${encodeURIComponent(batteryParam)}`
       : `${baseUrl}/dashboard`;
 
-    // Check for system Chrome
-    const systemChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-    const useSystemChrome = fs.existsSync(systemChromePath);
+    const executablePath = findPuppeteerExecutable();
 
     browser = await puppeteer.launch({
       headless: true,
       pipe: true,
       timeout: 60000,
-      executablePath: useSystemChrome ? systemChromePath : undefined,
+      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

@@ -111,9 +111,10 @@ export default function TestServicesPage() {
           {data._meta && (
             <div style={{ fontSize: '12px', color: '#6b7280' }}>
               <strong>Metadata:</strong>
+              {data._meta.provider && <div>Provider: {data._meta.provider}</div>}
               <div>Input tokens: {data._meta.input_tokens}</div>
               <div>Output tokens: {data._meta.output_tokens}</div>
-              <div>Cost: ${data._meta.cost_usd.toFixed(5)}</div>
+              <div>API cost: ${data._meta.cost_usd.toFixed(5)}</div>
             </div>
           )}
         </div>
@@ -142,9 +143,10 @@ export default function TestServicesPage() {
           {data._ai_meta && (
             <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
               <strong>AI Metadata:</strong>
+              {data._ai_meta.provider && <div>Provider: {data._ai_meta.provider}</div>}
               <div>Input tokens: {data._ai_meta.input_tokens}</div>
               <div>Output tokens: {data._ai_meta.output_tokens}</div>
-              <div>Cost: ${data._ai_meta.cost_usd.toFixed(5)}</div>
+              <div>API cost: ${data._ai_meta.cost_usd.toFixed(5)}</div>
             </div>
           )}
 
