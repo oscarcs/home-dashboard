@@ -202,6 +202,7 @@ interface BuildWeatherContextParams {
   moon?: MoonData;
   air_quality?: AirQualityData;
   timeContext: TimeContext;
+  timezone?: string;
 }
 
 // ============================================================================
@@ -221,7 +222,7 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
 
   getCacheSignature(_?: WeatherServiceConfig): string {
     const locations = this.getConfiguredLocations();
-    return JSON.stringify({ locations, llm: getLLMSignature() });
+    return JSON.stringify({ locations, llm: getLLMSignature(), prompt: 'weather-narrative-v2' });
   }
 
   isEnabled(): boolean {
@@ -617,10 +618,11 @@ export class WeatherService extends BaseService<WeatherDashboardData, WeatherSer
       isNight,
       moon: weatherData.moon,
       air_quality: weatherData.air_quality,
-      timeContext
+      timeContext,
+      timezone: weatherData.timezone
     });
 
-    const systemPrompt = `You generate accurate and helpful weather insights for a kitchen e-ink display. The dashboard shows temps/numbers, so describe the FEEL and STORY of the weather to help the user plan their day.
+    const systemPrompt = `You generate accurate and helpful weather insights for a kitchen e-ink display. The dashboard already shows weather numbers, so describe the feel, timing, and practical story of the weather.
 
 Return JSON:
 {
@@ -628,16 +630,21 @@ Return JSON:
 }
 
 Style:
-- Write like a friendly late night weather reporter providing informative updates
+- Write like a calm local weather presenter giving a practical briefing
 - Keep observations factual and helpful
 - Describe changes: "warming up", "heating up fast", "cooling down", "drying out", "getting wetter", "clearing up", "getting cloudy"
+- Tell one coherent story; avoid mixing conflicting comfort words like "muggy" and "crisp" unless the timing clearly changes
 
 Rules:
 - DO NOT mention specific temps (dashboard shows these) - use "cool", "warm", "hot", "chilly", "mild"
-- DO NOT mention specific month or date
+- DO NOT mention exact dates, exact temperatures, ISO timestamps, or raw percentages
+- Mention specific clock times only when timing is important for planning
+- Prioritize practical impacts: rain, storms, heat/cold, wind, visibility, UV, then sky conditions
+- Include "today", "tonight", or "tomorrow" only when it matches the planning focus
+- Do not invent rain, wind, fog, heat, or clearing trends that are not in the data
 
 Examples:
-{"daily_summary": "Dreary and rainy most of the day. Rain not letting up, stay cozy and dry"}
+{"daily_summary": "Rain hangs around most of the day, stay cozy and dry indoors"}
 {"daily_summary": "Cool start warming up fast, sunny and pleasant by afternoon"}
 {"daily_summary": "Chilly and misty this morning, staying fairly cool throughout the day"}
 {"daily_summary": "Breezy and mild now, cooling down with clear skies come evening"}
@@ -650,13 +657,14 @@ Remember:
 `;
 
     const now = new Date();
-    const month = now.toLocaleString('default', { month: 'long' });
-    const day = now.getDate();
-    const hour = now.getHours();
-    const ampm = hour < 12 ? 'AM' : 'PM';
-    const time = `${hour % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')} ${ampm}`;
+    const time = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: weatherData.timezone,
+    });
 
-    const userMessage = `Today is ${month} ${day}. It is ${timeContext.period.toUpperCase()}, ${time}. Planning for ${timeContext.planningFocus}
+    const userMessage = `It is ${timeContext.period.toUpperCase()}, ${time}. Planning for ${timeContext.planningFocus}
 
 CURRENT WEATHER: ${current.temp}°C, ${current.description}
 ${weatherContext.dailyInfo}
@@ -668,7 +676,7 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
   }
 
   private buildWeatherContext(params: BuildWeatherContextParams): WeatherContext {
-    const { current, relevantForecast, relevantHourly, isNight, moon, air_quality, timeContext } = params;
+    const { current, relevantForecast, relevantHourly, isNight, moon, air_quality, timeContext, timezone } = params;
     const context: { dailyInfo: string; hourlyData: string; contextNotes: string[] } = {
       dailyInfo: '',
       hourlyData: '',
@@ -688,7 +696,7 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
 
     // Hourly data
     context.hourlyData = relevantHourly
-      .map(h => `${h.time}: ${h.temp}° ${h.condition.trim()}${h.rain_chance > 0 ? ` (${h.rain_chance}%)` : ''}`)
+      .map(h => `${this.formatForecastTime(h.time, timezone)}: ${h.temp}° ${h.condition.trim()}${h.rain_chance > 0 ? ` (${h.rain_chance}%)` : ''}`)
       .join('\n');
 
     // Temperature swing
@@ -722,7 +730,7 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
 
       const transitionIndex = conditions.findIndex((c, i) => i > 0 && c !== conditions[i - 1]);
       if (transitionIndex > 0) {
-        const transitionTime = relevantHourly[transitionIndex].time;
+        const transitionTime = this.formatForecastTime(relevantHourly[transitionIndex].time, timezone);
         context.contextNotes.push(`${firstCond} → ${lastCond} around ${transitionTime}`);
       } else if (firstCond !== lastCond) {
         context.contextNotes.push(`${firstCond} → ${lastCond}`);
@@ -750,15 +758,17 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
       h.condition.toLowerCase().includes('fog') || h.condition.toLowerCase().includes('mist')
     );
     if (fogHours.length >= 2) {
-      const fogStart = fogHours[0].time;
-      const fogEnd = fogHours[fogHours.length - 1].time;
+      const fogStart = this.formatForecastTime(fogHours[0].time, timezone);
+      const fogEnd = this.formatForecastTime(fogHours[fogHours.length - 1].time, timezone);
       context.contextNotes.push(`Marine layer ${fogStart}-${fogEnd}`);
     }
 
     // Heat advisory
     const hotHours = relevantHourly.filter(h => (h.temp ?? 0) >= 32);
     if (hotHours.length >= 2) {
-      context.contextNotes.push(`Heat peak ${hotHours[0].time}-${hotHours[hotHours.length - 1].time}`);
+      const heatStart = this.formatForecastTime(hotHours[0].time, timezone);
+      const heatEnd = this.formatForecastTime(hotHours[hotHours.length - 1].time, timezone);
+      context.contextNotes.push(`Heat peak ${heatStart}-${heatEnd}`);
     }
 
     // Feels-like delta
@@ -790,6 +800,18 @@ ${weatherContext.hourlyData}${weatherContext.contextNotes ? '\n\nNOTES: ' + weat
       hourlyData: context.hourlyData,
       contextNotes: finalContextNotes,
     };
+  }
+
+  private formatForecastTime(value: string, timezone?: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timezone,
+    });
   }
 
   private getTimeContext(): TimeContext {
