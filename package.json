@@ -25,7 +25,7 @@
     "arduino"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "port=$(grep '^PORT=' .env | cut -d '=' -f2); next dev -p ${port:-7272}",
@@ -37,25 +37,25 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@phosphor-icons/react": "^2.1.10",
-    "@tailwindcss/postcss": "^4.2.4",
-    "axios": "^1.15.2",
+    "@tailwindcss/postcss": "^4.3.1",
+    "axios": "^1.18.1",
     "dotenv": "^17.4.2",
-    "next": "^16.2.4",
-    "puppeteer": "^24.42.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "sharp": "^0.34.5",
-    "yahoo-finance2": "^3.14.0"
+    "next": "^16.2.9",
+    "puppeteer": "^25.2.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sharp": "^0.35.2",
+    "yahoo-finance2": "^3.15.3"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.2.14",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
-    "postcss": "^8.5.12",
-    "tailwindcss": "^4.2.4",
-    "tsx": "^4.21.0",
+    "eslint-config-next": "^16.2.9",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }
