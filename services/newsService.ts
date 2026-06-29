@@ -33,6 +33,8 @@ interface NewsData {
     output_tokens: number;
     cost_usd: number;
     provider?: string;
+    summarySource?: 'ai' | 'fallback';
+    llmError?: string;
     selectionReasons?: Record<string, string>;
     scrapedAt: number;
   };
@@ -272,7 +274,7 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
     return JSON.stringify({
       llm: getLLMSignature(),
       sources: NEWS_SOURCES.map(source => source.name),
-      selection: 'headline-id-editorial-v3',
+      selection: 'headline-id-editorial-v4',
     });
   }
 
@@ -349,6 +351,7 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
             output_tokens: result.outputTokens,
             cost_usd: result.cost,
             provider: result.provider,
+            summarySource: 'ai' as const,
             selectionReasons: result.selectionReasons,
             scrapedAt: Date.now()
           };
@@ -356,10 +359,30 @@ export class NewsService extends BaseService<NewsData, NewsServiceConfig> {
           logger.info?.(`[News] AI selected ${displayHeadlines.length} display headlines`);
         } catch (summaryError) {
           logger.warn?.('[News] AI summary generation failed:', summaryError);
-          // Continue with fallback display headlines rather than failing the whole service
+          const errorMessage = summaryError instanceof Error ? summaryError.message : String(summaryError);
+          summaryText = this.buildFallbackSummary(displayHeadlines);
+          summaryMeta = {
+            input_tokens: 0,
+            output_tokens: 0,
+            cost_usd: 0,
+            provider: `${getLLMProvider()}:failed`,
+            summarySource: 'fallback' as const,
+            llmError: errorMessage,
+            scrapedAt: Date.now()
+          };
+          logger.warn?.(`[News] Using fallback summary: "${summaryText}"`);
         }
       } else {
         logger.info?.('[News] No LLM provider configured; skipping AI summary');
+        summaryText = this.buildFallbackSummary(displayHeadlines);
+        summaryMeta = {
+          input_tokens: 0,
+          output_tokens: 0,
+          cost_usd: 0,
+          provider: 'none',
+          summarySource: 'fallback' as const,
+          scrapedAt: Date.now()
+        };
       }
 
       return {
@@ -546,6 +569,7 @@ Style:
 - Focus on the most significant or recurring stories across sources
 - Be factual and neutral
 - Mention specific events, places, or developments
+- Preserve entity names from the headlines exactly; do not swap, abbreviate, or infer similar-looking names
 - The summary should reflect the selected headline_ids, not lower-priority unselected stories
 
 Rules:
@@ -557,6 +581,7 @@ Rules:
 - The selected headlines MUST be about different news events; skip duplicates or near-duplicates
 - Return ONLY headline IDs in headline_ids
 - NEVER translate, edit, shorten, rewrite, or invent headline text
+- NEVER introduce an organization, country, person, place, ticker, or acronym that is not present in the selected headlines
 - Consider Finnish Yle headlines normally. You may understand/translate internally, but only return IDs and reasons.
 - Prefer broad public impact: disasters, war, geopolitics, government, economy, public health, climate, severe weather, public safety
 - Penalize celebrity, media-personality, sport, lifestyle, novelty, and curiosity stories unless clearly nationally or internationally significant
@@ -619,6 +644,17 @@ Generate a concise summary and choose the 4 most important non-duplicate headlin
       if (id && reason) acc[id] = reason;
       return acc;
     }, {} as Record<string, string>);
+  }
+
+  private buildFallbackSummary(displayHeadlines: NewsHeadline[]): string {
+    const sources = [...new Set(displayHeadlines.slice(0, 4).map(headline => headline.source))];
+    if (sources.length === 0) return 'Latest news headlines are ready for review';
+
+    const label = sources.length === 1
+      ? sources[0]
+      : `${sources.slice(0, -1).join(', ')} and ${sources[sources.length - 1]}`;
+
+    return `Latest headlines from ${label} are ready`;
   }
 
   private getFallbackDisplayHeadlines(headlines: NewsHeadline[]): NewsHeadline[] {

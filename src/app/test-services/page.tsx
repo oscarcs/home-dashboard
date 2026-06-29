@@ -133,6 +133,8 @@ export default function TestServicesPage() {
             <div style={{ fontSize: '12px', color: '#6b7280' }}>
               <strong>Metadata:</strong>
               {data._meta.provider && <div>Provider: {data._meta.provider}</div>}
+              {data._meta.summarySource && <div>Summary source: {data._meta.summarySource}</div>}
+              {data._meta.llmError && <div>LLM error: {String(data._meta.llmError)}</div>}
               <div>Input tokens: {data._meta.input_tokens}</div>
               <div>Output tokens: {data._meta.output_tokens}</div>
               <div>API cost: ${data._meta.cost_usd.toFixed(5)}</div>

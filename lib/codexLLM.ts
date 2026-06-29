@@ -145,6 +145,10 @@ function runCodex(
 
     child.stdout.on('data', chunk => stdoutChunks.push(Buffer.from(chunk)));
     child.stderr.on('data', chunk => stderrChunks.push(Buffer.from(chunk)));
+    child.stdin.on('error', error => {
+      if ((error as NodeJS.ErrnoException).code === 'EPIPE') return;
+      reject(error);
+    });
     child.on('error', error => {
       clearTimeout(timer);
       reject(error);
